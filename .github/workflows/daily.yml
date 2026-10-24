@@ -1,0 +1,49 @@
+name: 每日更新
+
+on:
+  schedule:
+    - cron: "35 14 * * 1-5"   # 台北時間週一到週五 22:35（融資融券約 21:30 才公布）
+    - cron: "20 0 * * 2-6"    # 台北時間隔天早上 08:20，補抓晚到或更正的資料
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "指定日期（YYYY-MM-DD，留空 = 最近一個交易日）"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 下載資料、計算分數、產生網頁
+        env:
+          TARGET_DATE: ${{ inputs.date }}
+          PYTHONUNBUFFERED: "1"
+        run: python update.py "$TARGET_DATE"
+
+      - name: 存回 repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A data docs
+          if git diff --cached --quiet; then
+            echo "沒有新資料，不需要更新"
+            exit 0
+          fi
+          git commit -m "資料更新 $(TZ=Asia/Taipei date '+%Y-%m-%d %H:%M')"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
