@@ -899,6 +899,7 @@ footer a{color:var(--ink-2)}
   function onScroll() { bar.classList.toggle("solid", window.scrollY > (notice ? notice.offsetHeight : 0)); }
   place();
   window.addEventListener("resize", function () { place(); onScroll(); });
+  if (notice && window.ResizeObserver) new ResizeObserver(function () { place(); onScroll(); }).observe(notice);
   window.addEventListener("scroll", onScroll, { passive: true });
   onScroll();
 
