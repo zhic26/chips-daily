@@ -72,9 +72,11 @@ def build(cfg, now):
         print("還沒有任何選股結果，略過網頁")
         return
     latest = store.load_picks(dates[0])
+    # 用名單實際算出的時間，資料沒變時網頁也一字不變，就不會每次都產生新的 commit
+    stamp = (latest.get("generatedAt") or now.isoformat(timespec="minutes"))[:16].replace("T", " ")
     data = {
         "site": cfg["site"],
-        "generatedAt": now.strftime("%Y-%m-%d %H:%M"),
+        "generatedAt": stamp,
         "latest": latest,
         "history": history(cfg),
     }
