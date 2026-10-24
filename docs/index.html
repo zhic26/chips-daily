@@ -73,7 +73,7 @@ button{font:inherit;color:inherit}
   overflow-x:auto;scrollbar-width:none;white-space:nowrap}
 .tape::-webkit-scrollbar{display:none}
 .tape div{display:flex;align-items:baseline;gap:7px;font-size:14px;color:var(--ink-2)}
-.tape .num{font-size:17px;color:var(--ink);font-weight:500}
+.tape .val{font-size:17px;color:var(--ink);font-weight:500}
 .tape .chg{font-size:15px}
 
 /* 區塊 */
@@ -90,7 +90,8 @@ h2{margin:0 0 6px;font-size:26px;line-height:1.3;letter-spacing:.01em}
 .sort{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--ink-3)}
 .sort select{font:inherit;font-size:14.5px;color:var(--ink);background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:5px 8px}
 .summary{display:flex;flex-wrap:wrap;gap:6px 22px;margin:0 0 12px;font-size:14.5px;color:var(--ink-2)}
-.summary .num{font-size:17px;font-weight:600;color:var(--ink)}
+.summary .num{font-size:17px;font-weight:600}
+.summary .num:not(.up):not(.down){color:var(--ink)}
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:0 0 6px;font-size:13.5px;color:var(--ink-2)}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 
@@ -161,10 +162,10 @@ h2{margin:0 0 6px;font-size:26px;line-height:1.3;letter-spacing:.01em}
   grid-template-columns:minmax(0,1fr);align-items:center}
 .hist-date{font-weight:700;font-size:17px}
 .hist-date .wd{font-weight:400;font-size:14px;color:var(--ink-3);margin-left:6px}
-.mkt-perf{display:grid;grid-template-columns:3em repeat(3,minmax(0,1fr));gap:2px 12px;align-items:baseline;font-size:13.5px;color:var(--ink-3)}
-.mkt-perf b{font-weight:500;color:var(--ink-2)}
+.mkt-perf{display:grid;grid-template-columns:2.6em repeat(3,minmax(0,1fr));gap:2px 12px;align-items:end}
+.mkt-perf b{font-weight:600;font-size:14.5px;color:var(--ink-2);padding-bottom:2px}
+.mkt-perf .cell small{display:block;font-size:12.5px;line-height:1.4;color:var(--ink-3)}
 .mkt-perf .num{font-size:17px}
-.mkt-perf .num small{font-size:13px;color:var(--ink-3);margin-left:4px}
 .hist-body{padding:2px 4px 18px}
 .hist-cols{display:grid;gap:18px;grid-template-columns:minmax(0,1fr)}
 .hist-cols h3{margin:0 0 6px;font-size:15px;color:var(--ink-2)}
@@ -183,14 +184,15 @@ h2{margin:0 0 6px;font-size:26px;line-height:1.3;letter-spacing:.01em}
 
 /* 排行 */
 .rank-list{list-style:none;margin:0;padding:0;border-bottom:1px solid var(--rule-soft)}
-.rank-row{display:grid;grid-template-columns:30px minmax(0,1fr) auto auto;gap:2px 14px;align-items:baseline;padding:10px 4px;border-top:1px solid var(--rule-soft)}
+.rank-row{display:grid;grid-template-columns:30px minmax(0,1fr) 5.4em 7.4em;gap:2px 12px;align-items:baseline;padding:10px 4px;border-top:1px solid var(--rule-soft)}
 .rank-row .r{font-family:var(--num);color:var(--ink-3);font-size:16px}
 .rank-row .s{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;min-width:0}
 .rank-row .s b{font-size:16.5px}
 .rank-row .s .chip{--chip:10px;align-self:center}
 .rank-row .p{font-family:var(--num);text-align:right;font-size:16px;white-space:nowrap}
 .rank-row .p .chg{display:block;font-size:14px}
-.rank-row .m{font-family:var(--num);text-align:right;min-width:5.2em;white-space:nowrap}
+.rank-row .m{font-family:var(--num);text-align:right}
+.rank-row .m strong{white-space:nowrap}
 .rank-row .m strong{display:block;font-size:19px;font-weight:600}
 .rank-row .m small{display:block;font-size:13px;color:var(--ink-3)}
 .rank-note{font-size:13.5px;color:var(--ink-3);margin:10px 0 0;max-width:46em}
@@ -403,7 +405,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:6px 24px}
     }
     if (L.indices && L.indices.length) {
       el.appendChild(h("div", { class: "tape", "aria-label": "收盤指數" }, L.indices.map(function (x) {
-        return h("div", null, x.name, num(fmt(x.close, 2)),
+        return h("div", null, x.name, num(fmt(x.close, 2), "val"),
           h("span", { class: "num chg " + dir(x.chg) }, arrow(x.chg) + fmt(Math.abs(x.chgPct), 2) + "%"));
       })));
     }
@@ -548,11 +550,10 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:6px 24px}
           var sameDay = x.latest === x.next;
           return h("span", { class: "mkt-perf" },
             h("b", null, mk),
-            h("span", null, "隔日 ", num(pct(s.avg1), dir(s.avg1))),
-            sameDay ? h("span", null, "同期" + BENCH[mk] + " ", num(pct(s.bench1), dir(s.bench1))) :
-              h("span", null, "至今 ", num(pct(s.avgNow), dir(s.avgNow))),
-            sameDay ? h("span", null, "上漲比例 ", num((s.win1 == null ? "—" : s.win1 + "%"))) :
-              h("span", null, "同期" + BENCH[mk] + " ", num(pct(s.benchNow), dir(s.benchNow))));
+            cell("隔日", pct(s.avg1), s.avg1),
+            sameDay ? cell("同期" + BENCH[mk], pct(s.bench1), s.bench1) : cell("至今", pct(s.avgNow), s.avgNow),
+            sameDay ? cell("上漲比例", s.win1 == null ? "—" : s.win1 + "%", null) :
+              cell("同期" + BENCH[mk], pct(s.benchNow), s.benchNow));
         }));
       ul.appendChild(h("li", null, btn, panel));
     });
@@ -561,20 +562,26 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:6px 24px}
     body.appendChild(h("p", { class: "rank-note" }, "「至今」算到最新收盤 " + md(latest) + "。點日期可以看每一檔的漲跌。"));
   }
 
+  function cell(label, text, v) {
+    return h("span", { class: "cell" }, h("small", null, label), num(text, v == null ? "" : dir(v)));
+  }
+
   function fillHistory(el, x) {
+    var sameDay = x.latest === x.next;
     var cols = h("div", { class: "hist-cols" });
     MK.forEach(function (mk) {
       var rows = x.picks.filter(function (p) { return p.market === mk; }).sort(function (a, b) { return a.rank - b.rank; });
       if (!rows.length) return;
       cols.appendChild(h("div", null, h("h3", null, mk + " " + rows.length + " 檔"),
         h("table", { class: "mini" },
-          h("thead", null, h("tr", null, h("th", null, ""), h("th", null, "股票"), h("th", null, "當天收盤"), h("th", null, "隔日"), h("th", null, "至今"))),
+          h("thead", null, h("tr", null, h("th", null, ""), h("th", null, "股票"), h("th", null, "當天收盤"), h("th", null, "隔日"),
+            sameDay ? null : h("th", null, "至今"))),
           h("tbody", null, rows.map(function (p) {
             return h("tr", null, h("td", null, String(p.rank)),
               h("td", { class: "stk" }, p.name, h("span", { class: "c" }, p.code)),
               h("td", { class: "n" }, price(p.close)),
               h("td", { class: "n " + dir(p.ret1) }, pct(p.ret1, 1)),
-              h("td", { class: "n " + dir(p.retNow) }, pct(p.retNow, 1)));
+              sameDay ? null : h("td", { class: "n " + dir(p.retNow) }, pct(p.retNow, 1)));
           })))));
     });
     el.appendChild(cols);
