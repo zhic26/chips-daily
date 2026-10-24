@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""每日更新：下載盤後資料 → 計算籌碼分數 → 產生網頁 docs/index.html。
+"""每日更新：下載盤後資料 → 計算籌碼分數與大盤體溫 → 產生網頁 docs/index.html。
 
 用法：
   python update.py               最近一個已有盤後資料的交易日
@@ -14,7 +14,7 @@ import sys
 from chips import model, site, store
 from chips import sources as S
 from chips.bigholders import BigProvider
-from chips.daily import fetch_day
+from chips.daily import backfill_market, fetch_day, fetch_light
 from chips.net import FetchError
 
 DEFAULTS = {
@@ -29,10 +29,15 @@ DEFAULTS = {
     "tdcc_query_budget_seconds": 600,
     "backfill_days": 5,
     "history_days": 20,
-    "keep_daily_days": 30,
+    "market_history_days": 80,   # 算季線（60 日均線）和近 20 日趨勢需要的交易日數
+    "keep_daily_days": 85,
     "weights": {"inst_today": 25, "inst_5d": 25, "consistency": 10, "big_holders": 25, "margin": 15},
+    # 籌碼偏重扣分：融資 5 日增幅、20 日漲幅超過門檻就扣分
+    "crowding": {"margin_5d_pct": [10, 20], "margin_min_lots": 300, "runup_20d_pct": [30, 50], "points": [5, 10],
+                 "max_penalty": 15},
 }
 STREAK_DAYS = 10
+RECENT_FLOW_DAYS = 21
 
 
 def load_cfg():
@@ -69,27 +74,46 @@ def companies():
     return data
 
 
-def collect_days(target, need, today, comp):
-    """從 target 往回找 need 個交易日，缺的就下載。回傳 (新到舊的日期, {日期: 資料})。"""
-    nontrading = set((store.load_meta("nontrading") or {}).get("dates", []))
+class Calendar:
+    """記住哪些平日沒有交易（颱風假、國定假日），避免每次重抓。"""
+
+    def __init__(self, today):
+        self.today = today
+        self.dates = set((store.load_meta("nontrading") or {}).get("dates", []))
+        self.dirty = False
+
+    def closed(self, d):
+        return d.weekday() >= 5 or d.isoformat() in self.dates
+
+    def mark(self, d):
+        if (self.today - d).days >= 3 and d.isoformat() not in self.dates:  # 太近的日子可能只是還沒公布
+            self.dates.add(d.isoformat())
+            self.dirty = True
+
+    def save(self):
+        if self.dirty:
+            store.save_meta("nontrading", {"dates": sorted(self.dates)})
+
+
+def collect_days(target, need, cal, comp):
+    """從 target 往回找 need 個交易日的完整資料，缺的就下載。回傳 (新到舊的日期, {日期: 資料})。"""
     days, exs = [], {}
     d = target
     while len(days) < need and (target - d).days < 60:
-        if d.weekday() >= 5 or d.isoformat() in nontrading:
+        if cal.closed(d):
             d -= dt.timedelta(days=1)
             continue
         ex = store.load_daily(d)
-        if ex is None:
+        if ex is None or ex.get("light"):
             print(f"下載 {d} 盤後資料…", flush=True)
             ex = fetch_day(d, comp)
             if ex is None:
                 print(f"  {d} 沒有資料（休市或尚未公布）")
-                if (today - d).days >= 3:
-                    nontrading.add(d.isoformat())
+                cal.mark(d)
                 d -= dt.timedelta(days=1)
                 continue
             store.save_daily(d, ex)
-        elif ex["pending"] and (today - d).days <= 3:
+        elif ex["pending"] and (cal.today - d).days <= 3:
             before = list(ex["pending"])
             print(f"補抓 {d} 尚未公布的資料：{', '.join(before)}", flush=True)
             ex = fetch_day(d, comp, existing=ex)
@@ -100,8 +124,38 @@ def collect_days(target, need, today, comp):
         days.append(d)
         exs[d] = ex
         d -= dt.timedelta(days=1)
-    store.save_meta("nontrading", {"dates": sorted(nontrading)})
     return days, exs
+
+
+def ensure_history(latest, need, cal, comp, exs):
+    """確保 latest 往回有 need 個交易日的行情（季線、量能、融資趨勢用），舊日子只抓精簡版。"""
+    have = []
+    d = latest
+    fetched = 0
+    while len(have) < need and (latest - d).days < need * 2 + 40:
+        if cal.closed(d):
+            d -= dt.timedelta(days=1)
+            continue
+        with_flows = len(have) < RECENT_FLOW_DAYS
+        ex = exs.get(d) or store.load_daily(d)
+        if ex is None:
+            if fetched == 0:
+                print("補抓歷史行情（第一次會比較久）…", flush=True)
+            ex = fetch_light(d, comp, with_flows)
+            fetched += 1
+            if ex is None:
+                cal.mark(d)
+                d -= dt.timedelta(days=1)
+                continue
+            store.save_daily(d, ex)
+        elif backfill_market(ex, d, comp, with_flows):
+            store.save_daily(d, ex)
+        exs[d] = ex
+        have.append(d)
+        d -= dt.timedelta(days=1)
+    if fetched:
+        print(f"  補了 {fetched} 天歷史行情，共 {len(have)} 個交易日")
+    return have
 
 
 def same(a, b):
@@ -115,23 +169,24 @@ def main():
     today = now.date()
     target = dt.date.fromisoformat(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].strip() else today
     comp = companies()
+    cal = Calendar(today)
 
-    have_picks = store.picks_dates()
-    backfill = cfg["backfill_days"] if len(have_picks) < cfg["backfill_days"] else 1
+    recent = store.picks_dates()[:cfg["backfill_days"]]
+    outdated = [d for d in recent if (store.load_picks(d) or {}).get("model") != model.MODEL_VERSION]
+    backfill = cfg["backfill_days"] if len(recent) < cfg["backfill_days"] or outdated else 1
     need = max(cfg["lookback_days"] + backfill - 1, cfg["lookback_days"])
     try:
-        days, exs = collect_days(target, need, today, comp)
+        days, exs = collect_days(target, need, cal, comp)
+        if len(days) < cfg["lookback_days"]:
+            sys.exit("找不到足夠的交易日資料")
+        hist = ensure_history(days[0], cfg["market_history_days"] + backfill - 1, cal, comp, exs)
     except FetchError as e:
+        cal.save()
         sys.exit(f"證交所資料下載失敗：{e}")
-    if len(days) < cfg["lookback_days"]:
-        sys.exit("找不到足夠的交易日資料")
+    cal.save()
     print("交易日：", " ".join(f"{d:%m/%d}" for d in days))
 
-    # 已存下、更早的日子也載入，用來算連買天數
-    for d in store.daily_dates():
-        if d < days[-1] and len(days) < max(need, STREAK_DAYS):
-            days.append(d)
-            exs[d] = store.load_daily(d)
+    full = [d for d in hist if not exs[d].get("light")]  # 有完整資料的日子（算連買天數用）
 
     try:
         week, big = S.tdcc_latest()
@@ -141,15 +196,17 @@ def main():
         print("集保開放資料下載失敗：", e)
 
     provider = BigProvider(cfg["tdcc_query_budget_seconds"])
+    history = model.History(hist, exs)
     for i in range(min(backfill, len(days) - cfg["lookback_days"] + 1)):
         d = days[i]
         old = store.load_picks(d)
-        if i > 0 and old:
+        if i > 0 and old and old.get("model") == model.MODEL_VERSION:
             continue
-        doc = model.compute_day(days[i:i + STREAK_DAYS], exs, cfg, comp, provider)
+        streak_days = [x for x in full if x <= d][:STREAK_DAYS]
+        doc = model.compute_day(streak_days, exs, cfg, comp, provider, history)
         doc["generatedAt"] = now.isoformat(timespec="minutes")
         if same(doc, old):
-            print(f"{d} 選股結果沒有變化")
+            print(f"{d} 結果沒有變化")
             continue
         store.save_picks(d, doc)
         t = doc["tdcc"]
@@ -158,6 +215,9 @@ def main():
               f"｜待補：{', '.join(doc['pending']) or '無'}")
         for p in doc["picks"][:3]:
             print(f"   {p['market']} {p['rank']:>2}. {p['code']} {p['name']} {p['score']} {p['tags']}")
+        tm = doc.get("temp") or {}
+        if tm:
+            print("   大盤體溫：", "；".join(tm.get("read", [])))
     provider.flush()
     if provider.queried:
         print(f"集保逐檔查詢 {provider.queried} 次")

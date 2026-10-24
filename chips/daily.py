@@ -1,5 +1,7 @@
 """下載一個交易日的盤後資料，整理成 data/daily/YYYY-MM-DD.json。
 
+完整版（最近幾個交易日，用來計分）：行情、三大法人、融資融券、當沖、指數、法人金額。
+精簡版（更早的日子，用來算季線、量能、融資趨勢）：只有行情與大盤統計，標記 light。
 尚未公布的資料（例如晚上 9 點半前的融資融券）會記在 pending，下次執行再補抓。
 """
 from . import sources as S
@@ -25,29 +27,40 @@ def _inst_row(v):
     return [_i(v["foreign"]), _i(v["trust"]), _i(v["dealer"]), _i(v["total"])]
 
 
+def blank(d, light=False):
+    ex = {"date": d.isoformat(), "fetchedAt": None, "pending": [] if light else list(SOURCES),
+          "q": {}, "inst": {}, "margin": {}, "dt": {}, "shares": {}, "indices": {}, "market": {}}
+    if light:
+        ex["light"] = True
+    return ex
+
+
 def _run(src, d, ex, companies):
+    ex.setdefault("market", {})
     if src in ("twse_inst", "tpex_inst"):
         r = (S.twse_inst if src == "twse_inst" else S.tpex_inst)(d)
         if not r:
             return False
         ex["inst"].update({c: _inst_row(v) for c, v in r.items()})
     elif src == "twse_quotes":
-        stocks, idx = S.twse_quotes(d)
+        stocks, idx, stats = S.twse_quotes(d)
         if not stocks:
             return False
         for c, v in stocks.items():
             ex["q"][c] = _quote_row(v, "上市")
             sh = (companies.get(c) or {}).get("shares")
-            if sh:
+            if sh and not ex.get("light"):
                 ex["shares"][c] = _i(sh)
         ex["indices"].update(idx or {})
+        if stats and stats.get("value"):
+            ex["market"]["value"] = _i(stats["value"])
     elif src == "tpex_quotes":
         stocks = S.tpex_quotes(d)
         if not stocks:
             return False
         for c, v in stocks.items():
             ex["q"][c] = _quote_row(v, "上櫃")
-            if v.get("shares"):
+            if v.get("shares") and not ex.get("light"):
                 ex["shares"][c] = _i(v["shares"])
     elif src == "tpex_index":
         r = S.tpex_index(d)
@@ -60,10 +73,17 @@ def _run(src, d, ex, companies):
             return False
         ex["flows"] = {k: _i(v) for k, v in r.items()}
     elif src in ("twse_margin", "tpex_margin"):
-        r = (S.twse_margin if src == "twse_margin" else S.tpex_margin)(d)
+        if src == "twse_margin":
+            r, summary = S.twse_margin(d)
+            if summary:
+                ex["market"]["marginAmt"] = _i(summary["amt"])
+                ex["market"]["marginAmtPrev"] = _i(summary["amtPrev"])
+        else:
+            r = S.tpex_margin(d)
         if not r:
             return False
-        ex["margin"].update({c: [_i(v["mBal"]), _i(v["mChg"]), _i(v["sBal"]), _i(v["sChg"])] for c, v in r.items()})
+        if not ex.get("light"):
+            ex["margin"].update({c: [_i(v["mBal"]), _i(v["mChg"]), _i(v["sBal"]), _i(v["sChg"])] for c, v in r.items()})
     elif src in ("twse_dt", "tpex_dt"):
         r = (S.twse_daytrade if src == "twse_dt" else S.tpex_daytrade)(d)
         if not r:
@@ -72,10 +92,13 @@ def _run(src, d, ex, companies):
     return True
 
 
+def _stamp(ex):
+    ex["fetchedAt"] = S.taipei_now().isoformat(timespec="minutes")
+
+
 def fetch_day(d, companies, existing=None):
-    """新的一天：證交所沒有法人資料就回傳 None（休市或尚未公布）。已有的一天：只補抓 pending 的來源。"""
-    ex = existing or {"date": d.isoformat(), "fetchedAt": None, "pending": list(SOURCES),
-                      "q": {}, "inst": {}, "margin": {}, "dt": {}, "shares": {}, "indices": {}}
+    """完整版。新的一天：證交所沒有法人資料就回傳 None（休市或尚未公布）。已有的一天：只補抓 pending 的來源。"""
+    ex = existing or blank(d)
     fresh = existing is None
     changed = False
     for src in [s for s in SOURCES if s in ex["pending"]]:
@@ -94,5 +117,44 @@ def fetch_day(d, companies, existing=None):
     if fresh and "twse_quotes" in ex["pending"]:
         return None  # 法人有、行情沒有：資料還沒公布完整，先不存
     if changed or fresh:
-        ex["fetchedAt"] = S.taipei_now().isoformat(timespec="minutes")
+        _stamp(ex)
     return ex
+
+
+def fetch_light(d, companies, with_flows):
+    """精簡版：證交所沒有行情就回傳 None（休市）。with_flows：順便抓法人金額與融資總額（畫近 20 日趨勢用）。"""
+    ex = blank(d, light=True)
+    srcs = ["twse_quotes", "tpex_quotes"] + (["twse_flows", "twse_margin"] if with_flows else [])
+    for src in srcs:
+        try:
+            ok = _run(src, d, ex, companies)
+        except FetchError as e:
+            if src == "twse_quotes":
+                raise
+            print(f"  {src} 下載失敗：{e}")
+            ok = False
+        if src == "twse_quotes" and not ok:
+            return None
+        if not ok:
+            ex["pending"].append(src)
+    _stamp(ex)
+    return ex
+
+
+def backfill_market(ex, d, companies, with_flows):
+    """舊檔缺少大盤統計（新功能上線前抓的）就補抓。回傳有沒有更新。"""
+    m = ex.setdefault("market", {})
+    todo = []
+    if "value" not in m:
+        todo.append("twse_quotes")
+    if with_flows and "flows" not in ex and "twse_flows" not in ex.get("pending", []):
+        todo.append("twse_flows")
+    if with_flows and "marginAmt" not in m and "twse_margin" not in ex.get("pending", []):
+        todo.append("twse_margin")
+    changed = False
+    for src in todo:
+        try:
+            changed |= _run(src, d, ex, companies)
+        except FetchError as e:
+            print(f"  {d} 補 {src} 失敗：{e}")
+    return changed

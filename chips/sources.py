@@ -114,13 +114,13 @@ TWSE_INDEX_NAMES = {
 
 
 def twse_quotes(d):
-    """每日收盤行情：(個股 {代號: {...}}, 指數 {顯示名稱: {close, chg, chgPct}})。"""
+    """每日收盤行情：(個股 {代號: {...}}, 指數 {顯示名稱: {close, chg, chgPct}}, 大盤統計 {value 總成交金額})。"""
     j = _get(f"{TWSE}/afterTrading/MI_INDEX?date={d:%Y%m%d}&type=ALLBUT0999&response=json")
     if not j:
-        return None, None
+        return None, None, None
     t = next(_tables(j, "證券代號", "收盤價"), None)
     if not t:
-        return None, None
+        return None, None, None
     f = t["fields"]
     c = {k: _col(f, [n], i) for k, n, i in (("vol", "成交股數", 2), ("amt", "成交金額", 4), ("open", "開盤價", 5),
                                             ("high", "最高價", 6), ("low", "最低價", 7), ("close", "收盤價", 8),
@@ -150,24 +150,35 @@ def twse_quotes(d):
             if close is None:
                 continue
             indices[short] = {"close": close, "chg": round(sign * abs(pts or 0), 2), "chgPct": round(sign * abs(pct or 0), 2)}
-    return stocks, indices
+    stats = {}
+    st = next(_tables(j, "成交統計"), None)
+    if st and st.get("data"):
+        row = next((r for r in st["data"] if str(r[0]).strip().startswith("總計")), st["data"][-1])
+        stats["value"] = z(row[1])  # 大盤成交金額（元），新聞說的「成交量 X 億」就是這個
+    return stocks, indices, stats
 
 
 def twse_margin(d):
-    """融資融券餘額：{代號: {mBal, mChg, sBal, sChg}}，單位：張。約晚上 9 點半公布。"""
+    """融資融券餘額：({代號: {mBal, mChg, sBal, sChg}} 單位張, {amt, amtPrev} 全市場融資金額，單位仟元)。
+    約晚上 9 點半公布。"""
     j = _get(f"{TWSE}/marginTrading/MI_MARGN?date={d:%Y%m%d}&selectType=ALL&response=json")
     if not j:
-        return None
+        return None, None
     t = next((t for t in _tables(j, "代號") if len(t.get("data") or []) > 50), None)
     if not t:
-        return None
+        return None, None
     out = {}
     for r in t["data"]:
         code = str(r[0]).strip()
         if not is_common_stock(code) or len(r) < 13:
             continue
         out[code] = {"mBal": z(r[6]), "mChg": z(r[6]) - z(r[5]), "sBal": z(r[12]), "sChg": z(r[12]) - z(r[11])}
-    return out
+    summary = None
+    for st in _tables(j, "項目"):
+        for r in st.get("data") or []:
+            if str(r[0]).strip().startswith("融資金額") and len(r) >= 6:
+                summary = {"amtPrev": z(r[4]), "amt": z(r[5])}
+    return out, summary
 
 
 def twse_daytrade(d):
