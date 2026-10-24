@@ -7,7 +7,7 @@
 - **今日名單**：上市、上櫃各 20 檔，分數組成用籌碼圖示呈現，點開看理由與近 5 日明細
 - **後續表現**：之前每份名單的隔日與至今漲跌，和同期大盤比較
 - **盤後排行**：成交量、週轉率、當沖比率
-- 封面照片是 Unsplash 免費授權的下曼哈頓金融區夜景（攝影：Luca Bravo），網頁直接從 Unsplash 載入
+- 封面是 Pexels 免費授權的下曼哈頓天際線縮時影片（電腦版：Sarowar Hussain，手機版：Anatolii Grytsenko），用 `site/make_cover.sh` 剪成無縫循環，放在 `docs/media/`
 
 網站：<https://zhic26.github.io/chips-daily/>
 
@@ -50,6 +50,7 @@
 | `update.py` | 每日更新的主程式 |
 | `chips/` | 下載、解析、計分、產生網頁的程式 |
 | `site/template.html` | 網頁版型 |
+| `site/make_cover.sh` | 產生封面影片（需要 ffmpeg，平常不用動） |
 | `docs/` | 產生出來的網站（GitHub Pages 發布這裡） |
 | `data/daily/` | 每個交易日的盤後資料（最近幾天是完整版，更早的只留行情，共約 85 個交易日） |
 | `data/picks/` | 每天的名單與排行 |

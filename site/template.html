@@ -59,12 +59,17 @@ button{font:inherit;color:inherit}
   background:linear-gradient(180deg,#1d2440 0%,#4a4160 38%,#c98a52 58%,#1a1d29 72%,#0b0d14 100%);
   display:flex;flex-direction:column;isolation:isolate}
 .hero-bg{position:absolute;inset:0;z-index:-2;overflow:hidden;background:#141a2b center/cover no-repeat
-  url("https://images.unsplash.com/photo-1496588152823-86ff7695e68f?auto=format&fit=crop&w=60&q=40&blur=40")}
-.hero-bg img{width:100%;height:100%;object-fit:cover;object-position:58% 50%;display:block;transform:scale(1.06);transform-origin:62% 55%;
-  animation:push 34s ease-in-out infinite alternate;opacity:0;transition:opacity .9s ease}
-.hero-bg img.ready{opacity:1}
-@keyframes push{from{transform:scale(1.04) translate3d(0,0,0)}to{transform:scale(1.16) translate3d(-1.6%,-1.2%,0)}}
-@media (prefers-reduced-motion:reduce){.hero-bg img{animation:none}}
+  url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAgAAAQABAAD//gAQTGF2YzYwLjMxLjEwMgD/2wBDAAgSEhUSFRgYGBgYGB0bHR4eHh0dHR0eHh4gICAmJiYgICAeHiAgJCQmJikqKScnJicqKi0tLTY2MzM/P0FNTV3/xABmAAEBAQEBAAAAAAAAAAAAAAAFBgcECAEBAQEAAAAAAAAAAAAAAAAABAADEAABAwMCBQUBAAAAAAAAAAABAAIRBCEDEjFBQlHRBYKhYRMUIhEBAQEBAAAAAAAAAAAAAAAAAQACUf/AABEIABIAIAMBIgACEQADEQD/2gAMAwEAAhEDEQA/ANBoPN09YHayzCRldja05AS/SAdQsN52ukX+RoSSP04wQYMmL37Fee6bx2M3y5HGHGwsD89ZXY6io28HH1FRSWqvraTJOnJP8HJMcoJBPW0KXy1dPIDXAlwkTxHVZt9VO2YDtjzO7olzcI2b7nulixnJys2mxRuQlIt2KMyIhKafejnJB6PckWV//9k=")}
+.hero-stage{position:absolute;inset:0;transform-origin:56% 46%;animation:drift 30s ease-in-out infinite alternate}
+.hero-stage img,.hero-stage video{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover;object-position:50% 50%;
+  opacity:0;transition:opacity 1s ease}
+.hero-stage img.ready,.hero-stage video.ready{opacity:1}
+@keyframes drift{from{transform:scale(1.02)}to{transform:scale(1.09) translate3d(-1%,-.8%,0)}}
+@media (orientation:portrait){
+  .hero-bg{background-image:url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAgAAAQABAAD//gAQTGF2YzYwLjMxLjEwMgD/2wBDAAgSEhUSFRgYGBgYGB0bHR4eHh0dHR0eHh4gICAmJiYgICAeHiAgJCQmJikqKScnJicqKi0tLTY2MzM/P0FNTV3/xABxAAACAwEBAAAAAAAAAAAAAAAEBQAHAgYDAQADAQEAAAAAAAAAAAAAAAAEAwIAARAAAgEDAQUGBwEAAAAAAAAAAQIAEgMRQaEhMQUEE2JhUdGxFSKSUpFUgUIRAQEBAQEAAAAAAAAAAAAAAAABEWEh/8AAEQgAIAASAwEiAAIRAAMRAP/aAAwDAQACEQMRAD8A7FXIhik+P4iBXbQbI0th2GKYSENae8slPeWY7K55Sdlc8pxecVkOZIoXxqzg8KRw04zoek5gi2bbv8oYOSdRS6qB/apTwstkGobt8PFi6/8Asanbn3ivT5kGtzPqixIv3QCTgVN6zz+JdX+xd+pvWErbsgAMuTgZO7jrN0WPtOyZT//Z")}
+  .hero-stage img,.hero-stage video{object-position:50% 62%}
+}
+@media (prefers-reduced-motion:reduce){.hero-stage{animation:none}.hero-stage video{display:none}}
 .hero::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
   background:
     radial-gradient(120% 80% at 50% 30%,transparent 55%,rgba(6,8,16,.5) 100%),
@@ -363,12 +368,12 @@ footer a{color:var(--ink-2)}
   </div>
 </div>
 <header class="hero" id="top">
-  <div class="hero-bg" aria-hidden="true"><img alt="" fetchpriority="high" decoding="async" onload="this.classList.add('ready')"
-    src="https://images.unsplash.com/photo-1496588152823-86ff7695e68f?auto=format&amp;fit=crop&amp;w=2000&amp;q=78"
-    srcset="https://images.unsplash.com/photo-1496588152823-86ff7695e68f?auto=format&amp;fit=crop&amp;w=900&amp;h=1400&amp;q=75 900w,
-            https://images.unsplash.com/photo-1496588152823-86ff7695e68f?auto=format&amp;fit=crop&amp;w=1400&amp;q=78 1400w,
-            https://images.unsplash.com/photo-1496588152823-86ff7695e68f?auto=format&amp;fit=crop&amp;w=2000&amp;q=76 2000w"
-    sizes="100vw"></div>
+  <div class="hero-bg" aria-hidden="true"><div class="hero-stage">
+    <picture><source media="(orientation: portrait)" srcset="media/cover-tall.jpg">
+      <img alt="" fetchpriority="high" decoding="async" onload="this.classList.add('ready')"
+        src="media/cover-1080.jpg" srcset="media/cover-720.jpg 1280w, media/cover-1080.jpg 1920w" sizes="100vw"></picture>
+    <video id="hero-video" muted playsinline loop preload="none" disablepictureinpicture disableremoteplayback></video>
+  </div></div>
   <div class="grain" aria-hidden="true"></div>
   <p class="notice" id="notice">本站不是投顧，內容是公開資料的整理與規則篩選，不構成任何投資建議。<a href="#disclaimer">完整聲明</a></p>
   <div class="wrap hero-top"><div class="tape glass" id="tape" aria-label="收盤指數"></div></div>
@@ -435,6 +440,33 @@ footer a{color:var(--ink-2)}
 <footer><div class="wrap" id="foot"></div></footer>
 
 <script>const DATA = /*__DATA__*/null;</script>
+<script>
+/* ---------- 封面影片（Pexels 免費授權）：減少動態、省流量模式只顯示第一格畫面 ---------- */
+(function () {
+  var v = document.getElementById("hero-video");
+  if (!v || !v.canPlayType || !v.canPlayType("video/mp4")) return;
+  var mm = function (q) { return window.matchMedia ? window.matchMedia(q) : { matches: false }; };
+  var net = navigator.connection;
+  if (mm("(prefers-reduced-motion: reduce)").matches || (net && (net.saveData || /2g/.test(net.effectiveType || "")))) return;
+  var tall = mm("(orientation: portrait)"), inView = true;
+  v.muted = true;
+  function pick() {
+    var px = window.innerWidth * (window.devicePixelRatio || 1);
+    var src = "media/" + (tall.matches ? "cover-tall" : px > 1700 ? "cover-1080" : "cover-720") + ".mp4";
+    if (v.getAttribute("src") !== src) { v.classList.remove("ready"); v.setAttribute("src", src); }
+  }
+  function sync() {
+    if (inView && !document.hidden) { var p = v.play(); if (p && p.catch) p.catch(function () {}); } else v.pause();
+  }
+  v.addEventListener("playing", function () { v.classList.add("ready"); });
+  pick(); sync();
+  if (tall.addEventListener) tall.addEventListener("change", function () { pick(); sync(); });
+  document.addEventListener("visibilitychange", sync);
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function (es) { inView = es[0].isIntersecting; sync(); }).observe(v.parentNode);
+  }
+})();
+</script>
 <script>
 /* ---------- 頁面內容 ---------- */
 (function () {
@@ -898,7 +930,9 @@ footer a{color:var(--ink-2)}
     var el = document.getElementById("foot");
     add(el, h("span", null, "資料更新：" + (D.generatedAt || "—")));
     if (SITE.repo) add(el, h("a", { href: "https://github.com/" + SITE.repo, target: "_blank", rel: "noopener" }, "程式與原始資料"));
-    add(el, h("span", null, "封面照片：", h("a", { href: "https://unsplash.com/photos/panoramic-photography-of-brooklyn-bridge-_QdFx92MO2U", target: "_blank", rel: "noopener" }, "Luca Bravo / Unsplash")));
+    add(el, h("span", null, "封面影片：",
+      h("a", { href: "https://www.pexels.com/video/time-lapse-video-of-boats-traveling-on-river-against-city-background-5636798/", target: "_blank", rel: "noopener" }, "Sarowar Hussain"), "、",
+      h("a", { href: "https://www.pexels.com/video/breathtaking-new-york-city-skyline-at-twilight-32458596/", target: "_blank", rel: "noopener" }, "Anatolii Grytsenko"), "／Pexels"));
     add(el, h("span", null, "內容僅供參考，不構成投資建議"));
   }
 
