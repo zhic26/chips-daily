@@ -82,8 +82,8 @@ def fetch_day(d, companies, existing=None):
         try:
             ok = _run(src, d, ex, companies)
         except FetchError as e:
-            if fresh and src == "twse_inst":
-                raise
+            if fresh and src in ("twse_inst", "twse_quotes"):
+                raise  # 連線問題，不是休市：讓這次執行失敗，下次排程再試
             print(f"  {src} 下載失敗，下次再補：{e}")
             ok = False
         if fresh and src == "twse_inst" and not ok:

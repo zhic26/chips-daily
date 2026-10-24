@@ -61,11 +61,8 @@ def _col(fields, names, fallback):
 
 
 def _get(url):
-    try:
-        j = get_json(url)
-    except FetchError as e:
-        print("  下載失敗：", e)
-        return None
+    """有資料回傳 JSON；網站回覆「沒有資料」回傳 None；連線失敗則丟出 FetchError（不能當成休市）。"""
+    j = get_json(url)
     return j if _ok(j) else None
 
 
