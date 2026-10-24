@@ -662,7 +662,7 @@ footer a{color:var(--ink-2)}
   }
 
   // ---------- 今日名單 ----------
-  var state = { market: store("market") || "上市", sort: store("sort") || "score", animated: false };
+  var state = { market: store("market") || "上市", sort: "score", animated: false };
 
   function renderPicks() {
     var body = document.getElementById("picks-body");
@@ -682,7 +682,7 @@ footer a{color:var(--ink-2)}
         function (m) { state.market = m; store("market", m); renderPicks(); }),
       h("span", { class: "seg-label" }, "排序"),
       seg("排序方式", [["score", "分數"], ["chg", "漲跌幅"], ["vol", "成交量"], ["inst", "法人買超"]], state.sort,
-        function (s) { state.sort = s; store("sort", s); renderPicks(); })));
+        function (s) { state.sort = s; renderPicks(); })));
 
     var list = all.filter(function (p) { return state.market === "all" || p.market === state.market; });
     var key = { score: function (p) { return p.score; }, chg: function (p) { return p.chgPct; }, vol: function (p) { return p.volume; }, inst: function (p) { return p.instNet; } }[state.sort] || function (p) { return p.score; };
@@ -705,17 +705,17 @@ footer a{color:var(--ink-2)}
     panel.appendChild(h("div", { class: "list-head", "aria-hidden": "true" }, h("span", null, "名次"), h("span", null, "股票"), h("span", null, "收盤"), h("span", null, "籌碼組成"), h("span", null, "分數")));
     var ol = h("ol", { class: "picks" });
     var animate = !state.animated && !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-    list.forEach(function (p, i) { ol.appendChild(pickRow(p, animate && i < 8 ? i : null)); });
+    list.forEach(function (p, i) { ol.appendChild(pickRow(p, animate && i < 8 ? i : null, i + 1)); });
     state.animated = true;
     panel.appendChild(ol);
     body.appendChild(panel);
   }
 
-  function pickRow(p, animateRow) {
+  function pickRow(p, animateRow, pos) {
     var inner = h("div");
     var li = h("li", { class: "pick" });
     var btn = h("button", { type: "button", class: "pick-main", "aria-expanded": "false" },
-      h("span", { class: "rank" }, String(p.rank)),
+      h("span", { class: "rank" }, String(pos)),
       h("span", { class: "who" }, h("span", { class: "name" }, p.name), h("span", { class: "code" }, p.code),
         state.market === "all" ? h("span", { class: "mk" }, p.market) : null, h("span", { class: "sector" }, p.sector)),
       h("span", { class: "px" }, h("span", { class: "close" }, price(p.close)),
