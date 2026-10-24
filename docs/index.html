@@ -58,9 +58,11 @@ button{font:inherit;color:inherit}
 .hero{position:relative;min-height:max(620px,100svh);max-height:980px;color:var(--on-dark);overflow:hidden;
   background:linear-gradient(180deg,#1d2440 0%,#4a4160 38%,#c98a52 58%,#1a1d29 72%,#0b0d14 100%);
   display:flex;flex-direction:column;isolation:isolate}
-.hero-bg{position:absolute;inset:0;z-index:-2;overflow:hidden}
+.hero-bg{position:absolute;inset:0;z-index:-2;overflow:hidden;background:#141a2b center/cover no-repeat
+  url("https://images.unsplash.com/photo-1496588152823-86ff7695e68f?auto=format&fit=crop&w=60&q=40&blur=40")}
 .hero-bg img{width:100%;height:100%;object-fit:cover;object-position:58% 50%;display:block;transform:scale(1.06);transform-origin:62% 55%;
-  animation:push 34s ease-in-out infinite alternate}
+  animation:push 34s ease-in-out infinite alternate;opacity:0;transition:opacity .9s ease}
+.hero-bg img.ready{opacity:1}
 @keyframes push{from{transform:scale(1.04) translate3d(0,0,0)}to{transform:scale(1.16) translate3d(-1.6%,-1.2%,0)}}
 @media (prefers-reduced-motion:reduce){.hero-bg img{animation:none}}
 .hero::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
@@ -70,13 +72,13 @@ button{font:inherit;color:inherit}
     linear-gradient(90deg,rgba(8,10,20,.5) 0%,transparent 60%);}
 .grain{position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:.10;mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
-.notice{position:relative;font-size:12.5px;line-height:1.5;color:var(--on-dark-2);background:rgba(8,6,14,.55);
+.notice{position:relative;margin:0;font-size:12.5px;line-height:1.5;color:var(--on-dark-2);background:rgba(8,6,14,.55);
   padding:7px 16px;text-align:center;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 .notice a{color:var(--on-dark);text-underline-offset:3px}
 .glass{background:rgba(22,16,34,.36);border:1px solid rgba(255,255,255,.14);
   -webkit-backdrop-filter:blur(16px) saturate(1.3);backdrop-filter:blur(16px) saturate(1.3)}
 
-.topbar{position:fixed;left:0;right:0;top:var(--nt,34px);z-index:30;padding-top:10px;transition:top .25s ease}
+.topbar{position:fixed;left:0;right:0;top:var(--nt,34px);z-index:30;padding-top:10px}
 .topbar.solid{top:0}
 .hero-top{margin-top:80px;width:100%}
 .topbar .pill{display:flex;align-items:center;gap:18px;height:56px;padding:0 10px 0 16px;border-radius:18px;transition:background .25s,box-shadow .25s}
@@ -359,12 +361,11 @@ footer a{color:var(--ink-2)}
   </div>
 </div>
 <header class="hero" id="top">
-  <div class="hero-bg" aria-hidden="true"><img alt="" fetchpriority="high" decoding="async"
+  <div class="hero-bg" aria-hidden="true"><img alt="" fetchpriority="high" decoding="async" onload="this.classList.add('ready')"
     src="https://images.unsplash.com/photo-1496588152823-86ff7695e68f?auto=format&amp;fit=crop&amp;w=2000&amp;q=78"
     srcset="https://images.unsplash.com/photo-1496588152823-86ff7695e68f?auto=format&amp;fit=crop&amp;w=900&amp;h=1400&amp;q=75 900w,
             https://images.unsplash.com/photo-1496588152823-86ff7695e68f?auto=format&amp;fit=crop&amp;w=1400&amp;q=78 1400w,
-            https://images.unsplash.com/photo-1496588152823-86ff7695e68f?auto=format&amp;fit=crop&amp;w=2000&amp;q=78 2000w,
-            https://images.unsplash.com/photo-1496588152823-86ff7695e68f?auto=format&amp;fit=crop&amp;w=2800&amp;q=78 2800w"
+            https://images.unsplash.com/photo-1496588152823-86ff7695e68f?auto=format&amp;fit=crop&amp;w=2000&amp;q=76 2000w"
     sizes="100vw"></div>
   <div class="grain" aria-hidden="true"></div>
   <p class="notice" id="notice">本站不是投顧，內容是公開資料的整理與規則篩選，不構成任何投資建議。<a href="#disclaimer">完整聲明</a></p>
