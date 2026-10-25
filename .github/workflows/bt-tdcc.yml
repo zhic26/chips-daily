@@ -1,0 +1,28 @@
+name: 回測集保資料（暫時，用完就刪）
+on:
+  push:
+    branches: [backtest]
+    paths: [bt/tdcc_jobs/**, bt/tdcc.py]
+permissions:
+  contents: write
+jobs:
+  tdcc:
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [1, 2, 3]
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          if [ -f bt/tdcc_jobs/part${{ matrix.part }}.txt ]; then
+            python bt/tdcc.py run bt/tdcc_jobs/part${{ matrix.part }}.txt bt/tdcc/part${{ matrix.part }}.jsonl
+          elif [ "${{ matrix.part }}" = "1" ]; then
+            python bt/tdcc.py probe
+          fi
