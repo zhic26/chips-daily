@@ -1191,7 +1191,7 @@ footer a{color:var(--ink-2)}
       D.backtest && D.backtest.overall ? h("h3", null, "回測結果") : null,
       D.backtest && D.backtest.overall ? h("p", null, "用 " + D.backtest.period + " 共 " + fmt(D.backtest.days) + " 個交易日回測：" + D.backtest.note + "。" +
         MK.map(function (m) { var o = D.backtest.overall[m]; return m + "名單 5 個交易日後平均比同市場" + rel(o.d5) + "，20 個交易日後" + rel(o.d20); }).join("；") +
-        "。差距不大，一買一賣的成本（證交稅 0.3% 加手續費）就可能吃掉。多數股票站上季線時名單比較有效，站上季線的股票不到 " +
+        "。差距不大，一買一賣的成本（證交稅 0.3% 加手續費）就可能吃掉。也試過估值（本益比、殖利率）、動能、限制同產業檔數，還有把美股表現加進分數，名單都沒有變好，所以沒有加。多數股票站上季線時名單比較有效，站上季線的股票不到 " +
         (D.backtest.breadth_cut || [35])[0] + "% 時參考價值較低，所以名單上方會依當天狀況提醒。") : null,
       h("h3", null, "什麼時候更新"),
       h("p", null, "每個交易日晚上 10 點半左右自動更新（融資融券約 9 點半才公布），隔天早上再檢查一次有沒有補上的資料。集保千張大戶一週更新一次" +
