@@ -1,0 +1,24 @@
+name: 估值資料（回測用，暫時）
+on:
+  push:
+    branches: [backtest]
+    paths: [bt/valuation.py]
+permissions:
+  contents: write
+jobs:
+  val:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        market: [twse, tpex]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          python bt/valuation.py ${{ matrix.market }}
