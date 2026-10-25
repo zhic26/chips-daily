@@ -28,13 +28,14 @@ DEFAULTS = {
     "tdcc_candidates": 40,
     "tdcc_query_budget_seconds": 600,
     "backfill_days": 5,
-    "history_days": 20,
+    "history_days": 30,  # 後續表現列出最近幾份名單（要滿 20 個交易日才有 20 日報酬）
     "market_history_days": 80,   # 算季線（60 日均線）和近 20 日趨勢需要的交易日數
     "keep_daily_days": 85,
-    "weights": {"inst_today": 25, "inst_5d": 25, "consistency": 10, "big_holders": 25, "margin": 15},
-    # 籌碼偏重扣分：融資 5 日增幅、20 日漲幅超過門檻就扣分
+    # 權重依 2024/10～2026/10 回測調整：連買天數最有用、買超張數幾乎沒有預測力，融資看近 5 日
+    "weights": {"inst_today": 10, "inst_5d": 15, "consistency": 30, "big_holders": 25, "margin": 20},
+    # 籌碼偏重：融資 5 日增幅、20 日漲幅超過門檻就標示；deduct=true 才會扣分（回測扣分沒有提高報酬）
     "crowding": {"margin_5d_pct": [10, 20], "margin_min_lots": 300, "runup_20d_pct": [30, 50], "points": [5, 10],
-                 "max_penalty": 15},
+                 "max_penalty": 15, "deduct": False},
 }
 STREAK_DAYS = 10
 RECENT_FLOW_DAYS = 21

@@ -1,7 +1,7 @@
 """籌碼評分、大盤體溫與各種排行。輸入是 data/daily 的每日盤後資料，輸出是一天的結果。"""
 from .sources import INDUSTRY
 
-MODEL_VERSION = 2  # 計分方式改版時加一，舊的名單會在下次執行時用新方式重算
+MODEL_VERSION = 3  # 計分方式改版時加一，舊的名單會在下次執行時用新方式重算
 LOT = 1000
 MARKETS = ("上市", "上櫃")
 INDEX_ORDER = ["加權指數", "櫃買指數", "半導體", "電子", "金融", "航運", "生技"]
@@ -192,11 +192,12 @@ def score_market(rows, w, big_lookup, cfg):
     r1 = pct_rank([x["instNet"] / x["_avg"] for x in rows])
     r5 = pct_rank([x["inst5d"] / (x["_avg"] * x["_n"]) for x in rows])
     rc = pct_rank([x["foreignDays"] + 1.5 * x["trustDays"] for x in rows])
-    rm = pct_rank([-(x["marginChg"] or 0) / x["_avg"] for x in rows])
+    rm = pct_rank([-(x["marginAdd5"] if x["marginAdd5"] is not None else 0) / x["_avg"] for x in rows])
     for x, a, b, c, m in zip(rows, r1, r5, rc, rm):
         x["parts"] = {"inst_today": a * w["inst_today"], "inst_5d": b * w["inst_5d"],
                       "consistency": c * w["consistency"], "margin": m * w["margin"], "big_holders": 0.0}
-        x["penalty"], x["crowd"] = crowding(x, cfg["crowding"])
+        pts, x["crowd"] = crowding(x, cfg["crowding"])
+        x["penalty"] = pts if cfg["crowding"].get("deduct") else 0
         x["_pre"] = sum(x["parts"].values()) - x["penalty"]
     pool = [x for x in rows if x["instNet"] > 0]  # 當天三大法人必須是買超
     if big_lookup.full:
@@ -220,15 +221,15 @@ def score_market(rows, w, big_lookup, cfg):
 
 def tags_for(x):
     t = []
-    if x.get("penalty"):
-        t.append(f"籌碼偏重 −{x['penalty']}")
+    if x.get("crowd"):
+        t.append(f"籌碼偏重 −{x['penalty']}" if x.get("penalty") else "籌碼偏重")
     if x["trustStreak"] >= 3:
         t.append(f"投信連買 {x['trustStreak']} 日")
     if x["foreignStreak"] >= 3:
         t.append(f"外資連買 {x['foreignStreak']} 日")
     if x.get("bigChg") is not None and x["bigChg"] >= 0.5:
         t.append("大戶增持")
-    if x["marginChg"] is not None and -x["marginChg"] >= x["avgVol"] * 0.05:
+    if x.get("marginAdd5") is not None and -x["marginAdd5"] >= x["avgVol"] * 0.1:
         t.append("融資大減")
     if x["inst5d"] > x["avgVol"]:
         t.append("5 日買超大於均量")
@@ -245,10 +246,10 @@ def reason_for(x):
         if x.get("bigChg") is not None:
             t += f"，較前一週{'增加' if x['bigChg'] >= 0 else '減少'} {abs(x['bigChg']):.2f} 個百分點"
         s.append(t)
-    if x["marginChg"]:
-        s.append(f"融資{'減少' if x['marginChg'] < 0 else '增加'} {abs(x['marginChg']):,} 張")
+    if x.get("marginAdd5"):
+        s.append(f"融資近 5 日{'減少' if x['marginAdd5'] < 0 else '增加'} {abs(x['marginAdd5']):,} 張")
     if x.get("crowd"):
-        s.append("籌碼偏重扣 " + str(x["penalty"]) + " 分：" + "、".join(x["crowd"]))
+        s.append(("籌碼偏重扣 " + str(x["penalty"]) + " 分：" if x.get("penalty") else "籌碼偏重：") + "、".join(x["crowd"]))
     return "；".join(s).replace("-", "−") + "。"
 
 

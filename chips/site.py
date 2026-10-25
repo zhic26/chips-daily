@@ -3,14 +3,10 @@ import json
 import os
 
 from . import store
-from .model import BENCH, Q_CLOSE
+from .model import BENCH, Q_CLOSE, Q_EXR, Q_MKT, Q_OPEN, Q_VOL, Q_DIFF
 
 TEMPLATE = os.path.join(store.ROOT, "site", "template.html")
 DOCS = os.path.join(store.ROOT, "docs")
-
-
-def _ret(a, b):
-    return round((b / a - 1) * 100, 2) if a and b else None
 
 
 def _avg(xs):
@@ -18,51 +14,87 @@ def _avg(xs):
     return round(sum(xs) / len(xs), 2) if xs else None
 
 
-def _win(xs):
-    xs = [x for x in xs if x is not None]
-    return round(sum(1 for x in xs if x > 0) / len(xs) * 100) if xs else None
+def _day_ret(q):
+    """一天的報酬。一般用漲跌價差（對參考價，已扣除權息）；證交所除權息日的漲跌欄是 0，改用當天開盤到收盤。"""
+    if not q or q[Q_CLOSE] is None:
+        return None
+    close, diff, opn = q[Q_CLOSE], q[Q_DIFF], q[Q_OPEN]
+    if q[Q_EXR]:
+        return close / opn - 1 if opn else None
+    if diff is None or close == diff:
+        return None
+    return diff / (close - diff)
+
+
+def _hold(code, after, exf, k):
+    """名單公布隔天開盤買進、持有到第 k 個交易日收盤的報酬（%）。隔天沒有開盤價（停牌等）回傳 None。"""
+    q1 = exf(after[0])["q"].get(code)
+    if not q1 or not q1[Q_OPEN] or q1[Q_CLOSE] is None:
+        return None
+    v = q1[Q_CLOSE] / q1[Q_OPEN]
+    for d in after[1:k]:
+        r = _day_ret(exf(d)["q"].get(code))
+        if r is not None:
+            v *= 1 + r
+    return round((v - 1) * 100, 2)
+
+
+def _universe(d, stored, exf, cfg):
+    """選股日 d 通過流動性門檻的股票（同市場等權比較的對象）。"""
+    i = stored.index(d)
+    win = [exf(x) for x in stored[max(0, i - cfg["lookback_days"] + 1):i + 1]]
+    out = {mk: [] for mk in BENCH}
+    for code, q in exf(d)["q"].items():
+        if q[Q_CLOSE] is None or not q[Q_VOL] or q[Q_CLOSE] < cfg["min_price"] or q[Q_MKT] not in out:
+            continue
+        vols = [e["q"][code][Q_VOL] / 1000 for e in win if code in e["q"] and e["q"][code][Q_VOL]]
+        if vols and sum(vols) / len(vols) >= cfg["min_avg_lots"]:
+            out[q[Q_MKT]].append(code)
+    return out
 
 
 def history(cfg):
-    """近 N 個交易日的選股名單，加上隔日與至今的漲跌（以選出當天收盤價為基準，未還原除權息）。"""
+    """之前的名單：隔天開盤買進後 5 日、20 日（以及到最新收盤）的報酬，和同市場合格股票等權平均比較。"""
     dates = store.picks_dates()[:cfg["history_days"]]
     stored = sorted(store.daily_dates())  # 舊到新
     if not stored:
         return []
-    latest_day = stored[-1]
     cache = {}
 
-    def ex(d):
+    def exf(d):
         if d not in cache:
             cache[d] = store.load_daily(d)
         return cache[d]
 
-    latest = ex(latest_day)
     out = []
     for d in dates:
         doc = store.load_picks(d)
-        nxt = next((x for x in stored if x > d), None)
-        e1 = ex(nxt) if nxt else None
-        idx0 = {i["name"]: i["close"] for i in doc.get("indices", [])}
+        after = [x for x in stored if x > d]
+        n = len(after)
         rows = []
         for p in doc["picks"]:
-            c0 = p["close"]
-            c1 = e1["q"].get(p["code"], [None] * 10)[Q_CLOSE] if e1 else None
-            cn = latest["q"].get(p["code"], [None] * 10)[Q_CLOSE] if latest_day > d else None
-            rows.append({"code": p["code"], "name": p["name"], "market": p["market"], "sector": p.get("sector"),
-                         "rank": p["rank"], "score": p["score"], "close": c0, "tags": p.get("tags", []),
-                         "ret1": _ret(c0, c1), "retNow": _ret(c0, cn)})
+            r = {"code": p["code"], "name": p["name"], "market": p["market"], "sector": p.get("sector"),
+                 "rank": p["rank"], "score": p["score"], "close": p["close"], "tags": p.get("tags", [])}
+            if n:
+                r["entry"] = (exf(after[0])["q"].get(p["code"]) or [None] * 10)[Q_OPEN]
+                r["retNow"] = _hold(p["code"], after, exf, n)
+                r["ret5"] = _hold(p["code"], after, exf, 5) if n >= 5 else None
+                r["ret20"] = _hold(p["code"], after, exf, 20) if n >= 20 else None
+            rows.append(r)
         summary = {}
-        for mk, bench in BENCH.items():
+        uni = _universe(d, stored, exf, cfg) if n and d in stored else {mk: [] for mk in BENCH}
+        for mk in BENCH:
             grp = [r for r in rows if r["market"] == mk]
-            b0 = idx0.get(bench)
-            b1 = (e1 or {}).get("indices", {}).get(bench, {}).get("close") if e1 else None
-            bn = latest.get("indices", {}).get(bench, {}).get("close") if latest_day > d else None
-            summary[mk] = {"n": len(grp), "avg1": _avg(r["ret1"] for r in grp), "win1": _win(r["ret1"] for r in grp),
-                           "avgNow": _avg(r["retNow"] for r in grp), "winNow": _win(r["retNow"] for r in grp),
-                           "bench1": _ret(b0, b1), "benchNow": _ret(b0, bn)}
-        out.append({"date": doc["date"], "next": nxt.isoformat() if nxt else None,
-                    "latest": latest_day.isoformat(), "summary": summary, "picks": rows})
+            s = {"n": len(grp), "days": n}
+            for key, k in (("Now", n), ("5", 5), ("20", 20)):
+                if n and n >= k:
+                    b = _avg(_hold(c, after, exf, k) for c in uni[mk])
+                    rets = [r["ret" + key] for r in grp if r.get("ret" + key) is not None]
+                    s["avg" + key], s["bench" + key] = _avg(rets), b
+                    s["beat" + key] = round(sum(1 for x in rets if b is not None and x > b) / len(rets) * 100) if rets and b is not None else None
+            summary[mk] = s
+        out.append({"date": doc["date"], "next": after[0].isoformat() if n else None, "days": n,
+                    "latest": stored[-1].isoformat(), "model": doc.get("model"), "summary": summary, "picks": rows})
     return out
 
 
@@ -79,6 +111,7 @@ def build(cfg, now):
         "generatedAt": stamp,
         "latest": latest,
         "history": history(cfg),
+        "backtest": cfg.get("backtest"),
     }
     with open(TEMPLATE, encoding="utf-8") as f:
         html = f.read()

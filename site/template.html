@@ -157,6 +157,14 @@ section.block{padding:56px 0 6px}
   color:var(--ink-2);font-size:14.5px;max-width:48em}
 .note::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--f-big_holders);margin-right:8px;vertical-align:.12em}
 .controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:0 0 14px}
+.regime{margin:0 0 14px;padding:12px 16px 13px;border-radius:12px;background:var(--surface);border:1px solid var(--line-soft);max-width:52em}
+.regime h3{margin:0 0 7px;font-size:13px;font-weight:500;color:var(--ink-3)}
+.regime ul{margin:0;padding:0;list-style:none;display:grid;gap:7px;color:var(--ink-2);font-size:14.5px}
+.regime li b{color:var(--ink);font-weight:600}
+.regime .z{display:inline-block;font-size:12px;line-height:1.55;border-radius:999px;padding:0 8px;margin-right:8px;border:1px solid var(--line);color:var(--ink-2);vertical-align:.08em}
+.regime .z0{border-style:dashed;color:var(--ink-3)}
+.regime .z2{border-color:var(--accent);color:var(--accent)}
+.regime p{margin:9px 0 0;font-size:12.5px;color:var(--ink-3)}
 .seg{display:inline-flex;padding:4px;background:var(--sunk);border-radius:13px;max-width:100%;overflow-x:auto;scrollbar-width:none}
 .seg::-webkit-scrollbar{display:none}
 .seg button{border:0;background:none;padding:7px 14px;border-radius:10px;cursor:pointer;font-size:15px;color:var(--ink-2);white-space:nowrap;transition:background .2s,color .2s}
@@ -191,6 +199,7 @@ section.block{padding:56px 0 6px}
   background:radial-gradient(circle at 36% 30%,color-mix(in srgb,var(--c) 55%,#fff) 0 16%,var(--c) 46%,color-mix(in srgb,var(--c) 78%,#000) 100%);
   box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--c) 70%,#000),inset 0 0 0 2.6px rgba(255,255,255,.5),0 1px 1.5px rgba(10,12,20,.22)}
 .chip.empty{background:none;box-shadow:inset 0 0 0 1px var(--line)}
+.chip.warn{background:none;box-shadow:none;border:1px dashed var(--ink-3)}
 .chip.pen{background:repeating-linear-gradient(135deg,var(--ink-3) 0 1.2px,transparent 1.2px 3.2px);box-shadow:inset 0 0 0 1px var(--ink-3)}
 .f-inst_today{--c:var(--f-inst_today)} .f-inst_5d{--c:var(--f-inst_5d)} .f-consistency{--c:var(--f-consistency)}
 .f-big_holders{--c:var(--f-big_holders)} .f-margin{--c:var(--f-margin)}
@@ -332,6 +341,7 @@ section.block{padding:56px 0 6px}
 .factors b{font-size:16.5px}
 .factors .w{font-family:var(--num);font-size:22px;font-weight:600}
 .factors .w small{font-size:13px;font-weight:500;color:var(--ink-3)}
+.factors .w.txt{font-family:inherit;font-size:14px;font-weight:600;color:var(--ink-2)}
 .factors p{grid-column:2/4;margin:0;color:var(--ink-2);font-size:15px}
 .prose{color:var(--ink-2)}
 .prose h3{font-size:16.5px;color:var(--ink);margin:0 0 8px}
@@ -404,13 +414,13 @@ footer a{color:var(--ink-2)}
 
     <section class="block" id="picks" aria-labelledby="picks-h">
       <h2 id="picks-h">今日名單</h2>
-      <p class="lead">上市、上櫃分開計分，各取分數最高的 20 檔。一顆籌碼代表 5 分，顏色告訴你分數從哪裡來，斜線籌碼是籌碼偏重被扣掉的分數。點一下股票可以看明細。</p>
+      <p class="lead">上市、上櫃分開計分，各取分數最高的 20 檔。一顆籌碼代表 5 分，顏色告訴你分數從哪裡來；虛線框的「籌碼偏重」是提醒，不扣分。點一下股票可以看明細。</p>
       <div id="picks-body"></div>
     </section>
 
     <section class="block" id="history" aria-labelledby="history-h">
       <h2 id="history-h">之前的名單，後來表現如何</h2>
-      <p class="lead">以名單公布當天的收盤價為基準，看隔一個交易日和到最新收盤的漲跌，並和同期大盤比較（上市比加權指數、上櫃比櫃買指數）。股價沒有還原除權息。</p>
+      <p class="lead">假設名單公布後隔天開盤買進，看 5 個和 20 個交易日後的報酬，跟同市場所有合格股票用一樣方式買的平均比較（不是跟加權指數比）。除權息的影響已大致扣除。</p>
       <div id="history-body"></div>
     </section>
 
@@ -422,7 +432,7 @@ footer a{color:var(--ink-2)}
 
     <section class="block" id="method" aria-labelledby="method-h">
       <h2 id="method-h">分數怎麼算</h2>
-      <p class="lead">每項指標先在同一個市場的股票裡排名，換算成 0～1 的百分位，再乘上權重，五項加起來滿分 100；籌碼偏重的股票再扣分。</p>
+      <p class="lead">每項指標先在同一個市場的股票裡排名，換算成 0～1 的百分位，再乘上權重，五項加起來滿分 100。權重依 2024 年 10 月到 2026 年 10 月的回測調整過。</p>
       <div id="method-body"></div>
     </section>
 
@@ -473,7 +483,7 @@ footer a{color:var(--ink-2)}
   "use strict";
   var D = DATA || {}, L = D.latest || {}, SITE = D.site || {};
   var FK = ["inst_today", "inst_5d", "consistency", "big_holders", "margin"];
-  var FN = { inst_today: "法人今日買超", inst_5d: "法人 5 日累計", consistency: "法人買超天數", big_holders: "千張大戶週增減", margin: "融資減少" };
+  var FN = { inst_today: "法人今日買超", inst_5d: "法人 5 日累計", consistency: "法人買超天數", big_holders: "千張大戶週增減", margin: "融資 5 日減少" };
   var MK = ["上市", "上櫃"];
   var BENCH = { "上市": "加權", "上櫃": "櫃買" };
   var WD = "日一二三四五六";
@@ -725,13 +735,15 @@ footer a{color:var(--ink-2)}
     var sec = {};
     list.forEach(function (p) { sec[p.sector] = (sec[p.sector] || 0) + 1; });
     var topSec = Object.keys(sec).sort(function (a, b) { return sec[b] - sec[a]; }).slice(0, 3).map(function (s) { return s + " " + sec[s] + " 檔"; }).join("、");
+    var rg = regimeNote(state.market);
+    if (rg) body.appendChild(rg);
     body.appendChild(h("div", { class: "summary" },
       h("span", null, "平均 ", num(fmt(avg, 1)), " 分"),
       h("span", null, "收漲 ", num(String(up), "up"), " 檔、收跌 ", num(String(dn), "down"), " 檔"),
       topSec ? h("span", null, "產業最多：" + topSec) : null));
     body.appendChild(h("div", { class: "legend", "aria-hidden": "true" },
       FK.map(function (k) { return h("span", null, h("i", { class: "chip f-" + k }), FN[k]); }),
-      h("span", null, h("i", { class: "chip pen" }), "籌碼偏重扣分")));
+      list.some(function (p) { return p.penalty; }) ? h("span", null, h("i", { class: "chip pen" }), "籌碼偏重扣分") : null));
 
     var panel = h("div", { class: "panel" });
     panel.appendChild(h("div", { class: "list-head", "aria-hidden": "true" }, h("span", null, "名次"), h("span", null, "股票"), h("span", null, "收盤"), h("span", null, "籌碼組成"), h("span", null, "分數")));
@@ -741,6 +753,28 @@ footer a{color:var(--ink-2)}
     state.animated = true;
     panel.appendChild(ol);
     body.appendChild(panel);
+  }
+
+  // 依當天站上季線的比例，提醒回測裡這種盤名單的表現（描述過去，不是預測）
+  function rel(v) { return v == null ? "—" : Math.abs(v) < 0.05 ? "差不多" : (v > 0 ? "多 " : "少 ") + fmt(Math.abs(v), 2) + "%"; }
+  function mean(a) { return a.reduce(function (s, v) { return s + v; }, 0) / a.length; }
+  function regimeNote(mk) {
+    var B = D.backtest, T = L.temp;
+    if (!B || !B.by_breadth || !T || !T.breadth) return null;
+    var cut = B.breadth_cut || [35, 50];
+    var lines = (mk === "all" ? MK : [mk]).map(function (m) {
+      var b = (T.breadth[m] || {}).pct, bb = B.by_breadth[m];
+      if (b == null || !bb) return null;
+      b = Math.round(b);  // 顯示的數字和分區用同一個值，避免出現「35%（低於 35%）」
+      var i = b < cut[0] ? 0 : b <= cut[1] ? 1 : 2;
+      var range = i === 0 ? "低於 " + cut[0] + "%" : i === 1 ? cut[0] + "%～" + cut[1] + "%" : "高於 " + cut[1] + "%";
+      return h("li", null, h("span", { class: "z z" + i }, ["名單較弱的盤", "普通", "名單較有效的盤"][i]),
+        h("b", null, m + "站上季線的股票 " + fmt(b, 0) + "%"), "（" + range + "）。回測裡這種盤，" + m + "名單 5 個交易日後平均比同市場股票" +
+        rel(bb.d5[i]) + "，20 個交易日後" + rel(bb.d20[i]) + "。");
+    }).filter(Boolean);
+    if (!lines.length) return null;
+    return h("div", { class: "regime" }, h("h3", null, "盤勢提醒"), h("ul", null, lines),
+      h("p", null, "依 " + B.period + " 回測：" + B.note + "。描述過去的統計，不代表之後一定如此。"));
   }
 
   function pickRow(p, animateRow, pos) {
@@ -797,54 +831,66 @@ footer a{color:var(--ink-2)}
 
   function renderHistory() {
     var body = document.getElementById("history-body");
-    var hist = (D.history || []).filter(function (x) { return x.next; });
-    if (!hist.length) { body.appendChild(h("p", { class: "empty-state panel" }, "名單累積到下一個交易日收盤後，這裡就會開始顯示隔日表現。")); return; }
+    var hist = (D.history || []).filter(function (x) { return x.days > 0; });
+    var B = D.backtest;
+    if (!hist.length) { body.appendChild(h("p", { class: "empty-state panel" }, "名單公布後的下一個交易日收盤，這裡就會開始顯示表現。")); return; }
     var top = h("div", { class: "perf-top" });
     MK.forEach(function (mk) {
-      var rets = [], bench = [], wins = 0;
+      var a = [], b = [], win = 0;
       hist.forEach(function (x) {
-        x.picks.forEach(function (p) { if (p.market === mk && p.ret1 != null) { rets.push(p.ret1); if (p.ret1 > 0) wins++; } });
-        var s = x.summary[mk]; if (s && s.bench1 != null) bench.push(s.bench1);
+        var s = x.summary[mk] || {};
+        if (s.avg5 != null && s.bench5 != null) { a.push(s.avg5); b.push(s.bench5); if (s.avg5 > s.bench5) win++; }
       });
-      if (!rets.length) return;
-      var a = rets.reduce(function (s, v) { return s + v; }, 0) / rets.length;
-      var b = bench.length ? bench.reduce(function (s, v) { return s + v; }, 0) / bench.length : null;
-      top.appendChild(h("div", null, mk + "名單的隔日平均", num(pct(a), dir(a)),
-        h("span", { class: "vs" }, "同期" + BENCH[mk] + " " + pct(b) + "，上漲比例 " + Math.round(wins / rets.length * 100) + "%，共 " + rets.length + " 筆")));
+      var bt = B && B.overall && B.overall[mk];
+      var ref = bt ? "回測（" + B.period + "）平均 5 日比同市場" + rel(bt.d5) + "、20 日" + rel(bt.d20) + "。" : "";
+      if (!a.length) {
+        top.appendChild(h("div", null, mk + "名單 5 日表現", h("span", { class: "num" }, "累積中"),
+          h("span", { class: "vs" }, "名單滿 5 個交易日後開始計算。" + ref)));
+        return;
+      }
+      var ma = mean(a), mb = mean(b);
+      top.appendChild(h("div", null, mk + "名單 5 日平均（" + a.length + " 份名單）", num(pct(ma), dir(ma)),
+        h("span", { class: "vs" }, "同市場 " + pct(mb) + "，名單贏的有 " + win + " 份。" + ref)));
     });
     var ul = h("ul", { class: "hist" });
     hist.forEach(function (x) {
       var inner = h("div");
       var li = h("li");
-      var sameDay = x.latest === x.next;
       var btn = h("button", { type: "button", class: "hist-main", "aria-expanded": "false" },
         h("span", { class: "hist-date" }, md(x.date), h("span", { class: "wd" }, wd(x.date) + "的名單")),
         h("span", { class: "hist-mk" }, MK.map(function (mk) {
           var s = x.summary[mk] || {};
-          return h("span", { class: "mkt-perf" }, h("b", null, mk), cell("隔日", pct(s.avg1), s.avg1),
-            sameDay ? cell("同期" + BENCH[mk], pct(s.bench1), s.bench1) : cell("至今", pct(s.avgNow), s.avgNow),
-            sameDay ? cell("上漲比例", s.win1 == null ? "—" : s.win1 + "%", null) : cell("同期" + BENCH[mk], pct(s.benchNow), s.benchNow));
+          var cells = x.days >= 20 ? [cell("5 日", pct(s.avg5), s.avg5), cell("20 日", pct(s.avg20), s.avg20), cell("同市場 20 日", pct(s.bench20), s.bench20)]
+            : x.days >= 5 ? [cell("5 日", pct(s.avg5), s.avg5), cell("同市場 5 日", pct(s.bench5), s.bench5), cell("至今（" + x.days + " 天）", pct(s.avgNow), s.avgNow)]
+            : [cell("至今（" + x.days + " 天）", pct(s.avgNow), s.avgNow), cell("同市場", pct(s.benchNow), s.benchNow),
+               cell("贏過同市場", s.beatNow == null ? "—" : s.beatNow + "%", null)];
+          return h("span", { class: "mkt-perf" }, h("b", null, mk), cells);
         })), chev());
-      toggler(li, btn, function () { fillHistory(inner, x, sameDay); });
+      toggler(li, btn, function () { fillHistory(inner, x); });
       add(li, [btn, h("div", { class: "drawer" }, inner)]);
       ul.appendChild(li);
     });
     body.appendChild(h("div", { class: "panel" }, top, ul));
-    body.appendChild(h("p", { class: "fine" }, "「至今」算到最新收盤 " + md(hist[0].latest) + "。點日期可以看每一檔的漲跌。過去表現不代表未來。"));
+    body.appendChild(h("p", { class: "fine" }, "報酬從名單公布後隔天的開盤價起算，「至今」算到最新收盤 " + md(hist[0].latest) +
+      "。同市場是當天所有符合流動性門檻的股票，用一樣的方式買進的平均。沒有扣除交易成本（一買一賣約 0.4%）。點日期可以看每一檔。過去表現不代表未來。"));
   }
 
-  function fillHistory(el, x, sameDay) {
+  function fillHistory(el, x) {
     var cols = h("div", { class: "hist-cols" });
+    var keys = [["隔天開盤", "entry"]].concat(x.days >= 5 ? [["5 日", "ret5"]] : []).concat(x.days >= 20 ? [["20 日", "ret20"]] : [])
+      .concat(x.days < 20 ? [["至今", "retNow"]] : []);
     MK.forEach(function (mk) {
       var rows = x.picks.filter(function (p) { return p.market === mk; }).sort(function (a, b) { return a.rank - b.rank; });
       if (!rows.length) return;
       cols.appendChild(h("div", null, h("h3", null, mk + " " + rows.length + " 檔"),
         h("table", { class: "mini" },
-          h("thead", null, h("tr", null, h("th", null, ""), h("th", null, "股票"), h("th", null, "當天收盤"), h("th", null, "隔日"), sameDay ? null : h("th", null, "至今"))),
+          h("thead", null, h("tr", null, h("th", null, ""), h("th", null, "股票"), keys.map(function (k) { return h("th", null, k[0]); }))),
           h("tbody", null, rows.map(function (p) {
             return h("tr", null, h("td", null, String(p.rank)), h("td", { class: "stk" }, p.name, h("span", { class: "c" }, p.code)),
-              h("td", { class: "n" }, price(p.close)), h("td", { class: "n " + dir(p.ret1) }, pct(p.ret1, 1)),
-              sameDay ? null : h("td", { class: "n " + dir(p.retNow) }, pct(p.retNow, 1)));
+              keys.map(function (k) {
+                var v = p[k[1]];
+                return k[1] === "entry" ? h("td", { class: "n" }, price(v)) : h("td", { class: "n " + dir(v) }, pct(v, 1));
+              }));
           })))));
     });
     el.appendChild(h("div", null, cols));
@@ -891,21 +937,23 @@ footer a{color:var(--ink-2)}
   // ---------- 分數怎麼算 ----------
   function renderMethod() {
     var body = document.getElementById("method-body");
-    var w = L.weights || { inst_today: 25, inst_5d: 25, consistency: 10, big_holders: 25, margin: 15 };
+    var w = L.weights || { inst_today: 10, inst_5d: 15, consistency: 30, big_holders: 25, margin: 20 };
     var f = L.filters || {}, c = L.crowding || { margin_5d_pct: [10, 20], margin_min_lots: 300, runup_20d_pct: [30, 50], points: [5, 10], max_penalty: 15 };
     var desc = {
-      inst_today: "當天三大法人買超張數 ÷ 近 5 日平均成交量。用比例而不是張數，大型股和中小型股才比得公平。",
+      inst_today: "當天三大法人買超張數 ÷ 近 5 日平均成交量。用比例而不是張數，大型股和中小型股才比得公平。回測裡單日買超的預測力很弱，所以權重較低。",
       inst_5d: "近 5 個交易日三大法人累計買超 ÷ 5 日總成交量，看的是持續性，不只是一天。",
-      consistency: "近 5 日外資買超的天數，加上投信買超天數 × 1.5。投信規模小、買進通常更有指標性，所以權重較高。",
+      consistency: "近 5 日外資買超的天數，加上投信買超天數 × 1.5。回測裡這是最有預測力的一項，持續買進比單日買很多更有意義，投信連續買特別明顯。",
       big_holders: "集保資料中持股超過 1,000 張的股東，持股比例比前一週增加 1 個百分點以上給滿分，減少 1 個百分點以上給 0 分，中間依比例。",
-      margin: "當天融資餘額減少的張數 ÷ 5 日均量。融資多半是散戶，融資減少代表籌碼往法人、大戶集中。"
+      margin: "近 5 個交易日融資餘額增減的張數 ÷ 5 日均量，減少越多分數越高。融資多半是散戶，融資減少代表籌碼往法人、大戶集中；只看單日的效果比看 5 日差。"
     };
     var factors = h("div", { class: "panel" }, h("ul", { class: "factors" }, FK.map(function (k) {
       return h("li", null, h("i", { class: "chip f-" + k }), h("b", null, FN[k]), h("span", { class: "w" }, fmt(w[k]), h("small", null, " 分")), h("p", null, desc[k]));
-    }).concat([h("li", null, h("i", { class: "chip pen" }), h("b", null, "籌碼偏重"), h("span", { class: "w" }, "−" + c.max_penalty, h("small", null, " 分")),
+    }).concat([c.deduct ? h("li", null, h("i", { class: "chip pen" }), h("b", null, "籌碼偏重"), h("span", { class: "w" }, "−" + c.max_penalty, h("small", null, " 分")),
       h("p", null, "近 5 日融資增加 " + c.margin_5d_pct[0] + "% 以上（且至少 " + fmt(c.margin_min_lots) + " 張）扣 " + c.points[0] + " 分、" + c.margin_5d_pct[1] + "% 以上扣 " + c.points[1] +
-        " 分；近 20 日已漲 " + c.runup_20d_pct[0] + "% 以上扣 " + c.points[0] + " 分、" + c.runup_20d_pct[1] + "% 以上扣 " + c.points[1] + " 分，最多扣 " + c.max_penalty +
-        " 分。散戶槓桿一路堆高、或已經漲一大段的股票，回檔時通常比較兇。"))])));
+        " 分；近 20 日已漲 " + c.runup_20d_pct[0] + "% 以上扣 " + c.points[0] + " 分、" + c.runup_20d_pct[1] + "% 以上扣 " + c.points[1] + " 分，最多扣 " + c.max_penalty + " 分。"))
+      : h("li", null, h("i", { class: "chip warn" }), h("b", null, "籌碼偏重"), h("span", { class: "w txt" }, "只標示"),
+        h("p", null, "近 5 日融資增加 " + c.margin_5d_pct[0] + "% 以上（且至少 " + fmt(c.margin_min_lots) + " 張），或近 20 日已漲 " + c.runup_20d_pct[0] +
+          "% 以上，會標上「籌碼偏重」。回測裡這類股票平均報酬沒有比較差，但漲跌起伏大，大部分會回檔、少數會再大漲，所以只提醒、不扣分。"))])));
     var t = L.tdcc || {};
     var prose = h("div", { class: "panel prose" },
       h("h3", null, "哪些股票會被算進來"),
@@ -915,6 +963,11 @@ footer a{color:var(--ink-2)}
         h("li", null, "當天三大法人合計必須是買超。"),
         h("li", null, "千張大戶持股 " + fmt(f.max_big_pct || 99) + "% 以上的不列入，多半是公開收購或合併完成，幾乎沒有流通籌碼。"),
         h("li", null, "今天符合條件的有上市 " + fmt((L.universe || {})["上市"]) + " 檔、上櫃 " + fmt((L.universe || {})["上櫃"]) + " 檔。")),
+      D.backtest && D.backtest.overall ? h("h3", null, "回測結果") : null,
+      D.backtest && D.backtest.overall ? h("p", null, "用 " + D.backtest.period + " 共 " + fmt(D.backtest.days) + " 個交易日回測：" + D.backtest.note + "。" +
+        MK.map(function (m) { var o = D.backtest.overall[m]; return m + "名單 5 個交易日後平均比同市場" + rel(o.d5) + "，20 個交易日後" + rel(o.d20); }).join("；") +
+        "。差距不大，一買一賣的成本（證交稅 0.3% 加手續費）就可能吃掉。多數股票站上季線時名單比較有效，站上季線的股票不到 " +
+        (D.backtest.breadth_cut || [35])[0] + "% 時參考價值較低，所以名單上方會依當天狀況提醒。") : null,
       h("h3", null, "什麼時候更新"),
       h("p", null, "每個交易日晚上 10 點半左右自動更新（融資融券約 9 點半才公布），隔天早上再檢查一次有沒有補上的資料。集保千張大戶一週更新一次" +
         (t.week ? "，這次用 " + md(t.week) + " 那一週和 " + (t.prevWeek ? md(t.prevWeek) : "前一週") + " 比較。" : "。")),
