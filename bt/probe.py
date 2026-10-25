@@ -1,11 +1,13 @@
 """探測：注意／處置股資料來源，並把各資料來源的回應裁短存成測試用樣本。"""
-import json, os, subprocess, sys
+import json, os, re, subprocess, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT); os.chdir(ROOT)
 from chips.net import fetch
 OUT = "bt/probe"; os.makedirs(OUT, exist_ok=True)
 T, TP = "https://www.twse.com.tw/rwd/zh", "https://www.tpex.org.tw/www/zh-tw"
 urls = {
+ "holiday": f"{T}/holidaySchedule/holidaySchedule?date=20260101&response=json",
+ "tpex_attention_range": f"{TP}/bulletin/attention?date=2026/10/15&response=json",
  "twse_notice_rwd": f"{T}/announcement/notice?querytype=1&stockNo=&selectType=&startDate=20261022&endDate=20261022&response=json",
  "twse_punish_rwd": f"{T}/announcement/punish?querytype=3&stockNo=&selectType=&proceType=&remarkType=&startDate=20261001&endDate=20261022&response=json",
  "twse_notice_open": "https://openapi.twse.com.tw/v1/announcement/notice",
@@ -22,8 +24,12 @@ urls = {
  "fx_tpex_otc": f"{TP}/afterTrading/otc?date=2026/10/22&type=EW&response=json",
  "fx_tpex_margin": f"{TP}/margin/balance?date=2026/10/22&response=json",
 }
+CS = re.compile(r"[1-9]\d{3}")
 def trim(o):
     if isinstance(o, list):
+        if o and isinstance(o[0], list):  # 資料列：留前 5 列＋前 20 檔普通股
+            keep = o[:5] + [r for r in o[5:] if any(CS.fullmatch(str(x).strip()) for x in r[:3])][:20]
+            return keep
         return [trim(x) for x in o[:25]]
     if isinstance(o, dict):
         return {k: trim(v) for k, v in o.items()}
