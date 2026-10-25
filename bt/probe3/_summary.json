@@ -1,0 +1,139 @@
+{
+ "holiday": {
+  "ok": true,
+  "type": "dict",
+  "len": null,
+  "keys": [
+   "stat",
+   "date",
+   "title",
+   "fields",
+   "data",
+   "queryYear",
+   "total"
+  ],
+  "fields": [
+   "日期",
+   "名稱",
+   "說明"
+  ],
+  "title": "115 年市場開休市日期",
+  "stat": "ok",
+  "date": "20260101",
+  "n": 27,
+  "row0": [
+   "2026-01-01",
+   "中華民國開國紀念日",
+   "依規定放假1日。"
+  ]
+ },
+ "tpex_att_se": {
+  "ok": true,
+  "type": "dict",
+  "len": null,
+  "keys": [
+   "tables",
+   "date",
+   "stat"
+  ],
+  "stat": "ok",
+  "date": "20261015~20261016",
+  "tables": [
+   {
+    "title": "上櫃公布注意有價證券",
+    "fields": [
+     "編號",
+     "證券代號",
+     "證券名稱",
+     "累計",
+     "注意交易資訊",
+     "公告日期",
+     "收盤價",
+     "本益比",
+     "link"
+    ],
+    "n": 39
+   }
+  ]
+ },
+ "tpex_att_d2": {
+  "ok": true,
+  "type": "dict",
+  "len": null,
+  "keys": [
+   "tables",
+   "date",
+   "stat"
+  ],
+  "stat": "ok",
+  "date": "20261022~20261015",
+  "tables": [
+   {
+    "title": "上櫃公布注意有價證券",
+    "fields": [
+     "編號",
+     "證券代號",
+     "證券名稱",
+     "累計",
+     "注意交易資訊",
+     "公告日期",
+     "收盤價",
+     "本益比",
+     "link"
+    ],
+    "n": 0
+   }
+  ]
+ },
+ "tpex_att_roc": {
+  "ok": true,
+  "type": "dict",
+  "len": null,
+  "keys": [
+   "tables",
+   "date",
+   "stat"
+  ],
+  "stat": "ok",
+  "date": "20261022~20261025",
+  "tables": [
+   {
+    "title": "上櫃公布注意有價證券",
+    "fields": [
+     "編號",
+     "證券代號",
+     "證券名稱",
+     "累計",
+     "注意交易資訊",
+     "公告日期",
+     "收盤價",
+     "本益比",
+     "link"
+    ],
+    "n": 20
+   }
+  ]
+ },
+ "tpex_warn_d": {
+  "ok": true,
+  "type": "dict",
+  "len": null,
+  "keys": [
+   "tables",
+   "stat"
+  ],
+  "stat": "ok",
+  "tables": [
+   {
+    "title": "上櫃公布注意累計次數可能達處置標準之有價證券",
+    "fields": [
+     "編號",
+     "證券代號",
+     "證券名稱",
+     "近期達本公司「公布注意交易資訊」標準之情形"
+    ],
+    "n": 4
+   }
+  ]
+ }
+}
