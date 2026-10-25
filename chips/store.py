@@ -23,6 +23,7 @@ def _read(path, default=None):
 
 
 def _write(path, obj, pretty=False):
+    os.makedirs(os.path.dirname(path), exist_ok=True)  # 新的資料夾（例如第一次存的 tdcc_full）要先建立
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         if pretty:

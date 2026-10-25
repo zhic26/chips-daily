@@ -240,8 +240,10 @@ def main():
             print(f"集保：存入 {week} 股東人數與級距（{len(tdcc_full)} 檔）")
         if week and store.save_tdcc(week, big):
             print(f"集保：新增 {week} 週資料（{len(big)} 檔）")
-    except Exception as e:
-        print("集保開放資料下載失敗：", e)
+    except FetchError as e:
+        print("集保開放資料下載失敗，下次再抓：", e)
+    except Exception as e:  # 不是連線問題（例如程式或格式錯誤）：名單照常更新，但讓這次執行顯示失敗
+        problems.append(f"集保開放資料處理失敗：{e!r}")
 
     provider = BigProvider(cfg["tdcc_query_budget_seconds"])
     history = model.History(hist, exs)
