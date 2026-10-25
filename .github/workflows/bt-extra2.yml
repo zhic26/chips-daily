@@ -1,0 +1,24 @@
+name: 回測補充資料二（暫時，用完就刪）
+on:
+  push:
+    branches: [backtest]
+    paths: [bt/extra2.py]
+permissions:
+  contents: write
+jobs:
+  fetch:
+    strategy:
+      fail-fast: false
+      matrix:
+        job: ["rev", "sbl 1 4", "sbl 2 4", "sbl 3 4", "sbl 4 4"]
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          python bt/extra2.py ${{ matrix.job }}
