@@ -285,7 +285,7 @@ def alert_text(a):
     if a.get("notice"):
         t = f"今天被列為注意股：{a['why']}" if a.get("why") else "今天被列為注意股"
         if a["notice"] >= 2:
-            t += f"；已連續 {a['notice']} 個交易日，連續 3 個交易日通常就會被處置"
+            t += f"；已連續 {a['notice']} 個交易日，連續被列有可能被處置"
         s.append(t)
     return s
 

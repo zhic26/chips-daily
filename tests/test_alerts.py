@@ -88,7 +88,7 @@ class Tags(unittest.TestCase):
     def test_tags_and_reason(self):
         x = dict(self.base, alert={"notice": 2, "why": "最近六個營業日累積收盤價漲幅達33.04%"})
         self.assertEqual(model.tags_for(x)[0], "連續注意 2 天")
-        self.assertIn("連續 3 個交易日通常就會被處置", model.reason_for(x))
+        self.assertIn("已連續 2 個交易日", model.reason_for(x))
         x = dict(self.base, alert={"notice": 1, "why": "x", "punish": {"start": "2026-10-22", "end": "2026-10-29", "step": "第一次處置", "mins": 5, "prepay": True}})
         self.assertEqual(model.tags_for(x)[0], "處置中")
         r = model.reason_for(x)
