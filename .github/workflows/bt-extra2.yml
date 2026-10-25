@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        job: ["rev", "sbl 1 4", "sbl 2 4", "sbl 3 4", "sbl 4 4"]
+        job: ["sbl 1 4", "sbl 3 4", "sbl 4 4"]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:

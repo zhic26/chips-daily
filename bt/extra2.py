@@ -98,8 +98,7 @@ def sbl(part, parts):
             continue
         data = (j or {}).get("data") or []
         if meta is None and data:
-            meta = {"fields": j.get("fields"), "sample": data[:2]}
-            json.dump(meta, open(f"{OUT}/sbl_fields.json", "w"), ensure_ascii=False)
+            meta = True  # 欄位說明已經存過（第 2 份），其他份不再寫同一個檔，避免推送衝突
         day = {}
         for r in data:
             code = str(r[0]).strip()
@@ -109,10 +108,10 @@ def sbl(part, parts):
         if (i + 1) % 40 == 0:
             with gzip.open(path, "wt") as fh:
                 json.dump(out, fh, separators=(",", ":"))
-            save([path] + ([f"{OUT}/sbl_fields.json"] if meta else []), f"借券 {part} {i + 1}")
+            save([path], f"借券 {part} {i + 1}")
     with gzip.open(path, "wt") as fh:
         json.dump(out, fh, separators=(",", ":"))
-    save([path] + ([f"{OUT}/sbl_fields.json"] if meta else []), f"借券 {part} 完成")
+    save([path], f"借券 {part} 完成")
 
 
 if __name__ == "__main__":
