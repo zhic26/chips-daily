@@ -1,4 +1,61 @@
 {
+ "holiday": {
+  "ok": true,
+  "type": "dict",
+  "len": null,
+  "keys": [
+   "stat",
+   "date",
+   "title",
+   "fields",
+   "data",
+   "queryYear",
+   "total"
+  ],
+  "fields": [
+   "日期",
+   "名稱",
+   "說明"
+  ],
+  "title": "115 年市場開休市日期",
+  "stat": "ok",
+  "date": "20260101",
+  "n": 27,
+  "row0": [
+   "2026-01-01",
+   "中華民國開國紀念日",
+   "依規定放假1日。"
+  ]
+ },
+ "tpex_attention_range": {
+  "ok": true,
+  "type": "dict",
+  "len": null,
+  "keys": [
+   "tables",
+   "date",
+   "stat"
+  ],
+  "stat": "ok",
+  "date": "20261022~20261025",
+  "tables": [
+   {
+    "title": "上櫃公布注意有價證券",
+    "fields": [
+     "編號",
+     "證券代號",
+     "證券名稱",
+     "累計",
+     "注意交易資訊",
+     "公告日期",
+     "收盤價",
+     "本益比",
+     "link"
+    ],
+    "n": 20
+   }
+  ]
+ },
  "twse_notice_rwd": {
   "ok": true,
   "type": "dict",
