@@ -16,7 +16,7 @@ os.chdir(ROOT)
 from chips.net import FetchError, decode, fetch  # noqa: E402
 from chips import net  # noqa: E402
 
-net.MIN_GAP["www.tdcc.com.tw"] = 1.0  # 回測大量查詢：放慢一點，避免造成集保網站負擔
+net.MIN_GAP["www.tdcc.com.tw"] = 1.5  # 回測大量查詢：放慢一點，避免造成集保網站負擔
 
 URL = "https://www.tdcc.com.tw/portal/zh/smWeb/qryStock"
 
@@ -93,31 +93,46 @@ def main():
         return
     jobs = [ln.split() for ln in open(sys.argv[2]) if ln.strip()]
     out = sys.argv[3]
+    errlog = out.replace(".jsonl", "_errors.txt")
     done = set()
-    if os.path.exists(out):
-        for ln in open(out):
-            r = json.loads(ln)
-            done.add((r["c"], r["w"]))
-    t.refresh()
-    n, t0 = 0, time.time()
-    with open(out, "a") as fh:
+    for path in [out] + [x for x in sys.argv[4:]]:
+        if os.path.exists(path):
+            for ln in open(path):
+                r = json.loads(ln)
+                done.add((r["c"], r["w"]))
+    n, fails, t0 = 0, 0, time.time()
+    with open(out, "a") as fh, open(errlog, "a") as eh:
+        try:
+            t.refresh()
+        except Exception as e:
+            eh.write(f"{time.strftime('%H:%M:%S')} 拿不到查詢頁：{e!r}\n")
+            eh.flush()
+            save([out, errlog], "查詢頁失敗")
+            return
         for code, week in jobs:
             if (code, week) in done:
                 continue
             try:
                 tab = t.table(code, week)
-            except FetchError as e:
-                print(code, week, "失敗", e, flush=True)
-                time.sleep(30)
+                fails = 0
+            except Exception as e:
+                fails += 1
+                eh.write(f"{time.strftime('%H:%M:%S')} {code} {week} {e!r}\n")
+                eh.flush()
+                if fails >= 8:
+                    eh.write("連續失敗 8 次，先停止\n")
+                    break
+                time.sleep(20)
                 t.token = None
                 continue
             fh.write(json.dumps({"c": code, "w": week, "t": tab}, separators=(",", ":")) + "\n")
             n += 1
-            if n % 200 == 0:
+            if n % 100 == 0:
                 fh.flush()
-                print(n, "筆", f"{(time.time() - t0) / n:.2f} 秒/筆", flush=True)
-                save([out], f"{os.path.basename(out)} {n}")
-    save([out], f"{os.path.basename(out)} 完成")
+                eh.write(f"{time.strftime('%H:%M:%S')} 已完成 {n} 筆，{(time.time() - t0) / n:.2f} 秒/筆\n")
+                eh.flush()
+                save([out, errlog], f"{os.path.basename(out)} {n}")
+    save([out, errlog], f"{os.path.basename(out)} 結束 {n}")
 
 
 if __name__ == "__main__":

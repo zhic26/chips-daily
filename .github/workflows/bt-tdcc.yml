@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        part: [1, 2, 3]
+        part: [1]
     runs-on: ubuntu-latest
     timeout-minutes: 340
     steps:
@@ -21,8 +21,8 @@ jobs:
       - run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          if [ -f bt/tdcc_jobs/part${{ matrix.part }}.txt ]; then
-            python bt/tdcc.py run bt/tdcc_jobs/part${{ matrix.part }}.txt bt/tdcc/part${{ matrix.part }}.jsonl
+          if [ -f bt/tdcc_jobs/all.txt ]; then
+            python bt/tdcc.py run bt/tdcc_jobs/all.txt bt/tdcc/part4.jsonl bt/tdcc/part1.jsonl bt/tdcc/part2.jsonl bt/tdcc/part3.jsonl
           elif [ "${{ matrix.part }}" = "1" ]; then
             python bt/tdcc.py probe
           fi
