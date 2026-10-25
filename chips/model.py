@@ -392,11 +392,11 @@ def market_temp(d0, exs, history):
         return ((H.market[d].get("indices") or {}).get(name) or {}).get("close")
 
     tw, ot = [ix(d, "加權指數") for d in days[:21]], [ix(d, "櫃買指數") for d in days[:21]]
-    ratio = [b / a if a and b else None for a, b in zip(tw[:20], ot[:20])]
-    base = next((x for x in reversed(ratio) if x), None)
+    rel = [b / a if a and b else None for a, b in zip(tw[:20], ot[:20])]  # 櫃買 ÷ 加權（新到舊）
+    base = next((x for x in reversed(rel) if x), None)
     otc_now = (exs[d0].get("indices") or {}).get("櫃買指數") or {}
     otc = {"today": otc_now.get("chgPct"), "taiex": taiex.get("chgPct"),
-           "series": [round(x / base * 100, 2) if x and base else None for x in reversed(ratio)], "rel20": None}
+           "series": [round(x / base * 100, 2) if x and base else None for x in reversed(rel)], "rel20": None}
     if len(tw) > 20 and tw[0] and ot[0] and tw[20] and ot[20]:
         otc["otc20"] = round((ot[0] / ot[20] - 1) * 100, 2)
         otc["taiex20"] = round((tw[0] / tw[20] - 1) * 100, 2)

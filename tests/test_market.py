@@ -61,3 +61,21 @@ class Read(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RealData(unittest.TestCase):
+    """用 repo 裡的每日資料實際算一次大盤體溫（之前改版時變數撞名，只有用真資料跑才抓得到）。"""
+
+    def test_market_temp(self):
+        from chips import store
+        dates = store.daily_dates()
+        if len(dates) < 25:
+            self.skipTest("每日資料不夠")
+        exs = {d: store.load_daily(d) for d in dates}
+        d0 = next(d for d in dates if not exs[d].get("light"))
+        days = [d for d in dates if d <= d0]
+        t = model.market_temp(d0, exs, model.History(days, exs))
+        self.assertIsInstance(t["value"]["ratio"], (float, type(None)))
+        self.assertEqual(len(t["otc"]["series"]), 20)
+        self.assertEqual(len(t["futures"]["series"]), 20)
+        self.assertTrue(t["read"])
