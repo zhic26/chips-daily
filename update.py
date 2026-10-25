@@ -23,7 +23,7 @@ from chips.net import FetchError
 STALE_WEEKDAYS = 8  # 超過這麼多個平日都沒抓到新資料，就當作出問題（農曆年連假最長約 7 個平日）
 
 DEFAULTS = {
-    "site": {"title": "籌碼日報", "tagline": "每個交易日盤後，用三大法人、千張大戶與融資變化篩出上市、上櫃各 20 檔。"},
+    "site": {"title": "Financhic", "tagline": "每個交易日盤後，用三大法人、千張大戶與融資變化篩出上市、上櫃各 20 檔。"},
     "top_n": 20,
     "lookback_days": 5,
     "min_avg_lots": 1000,
