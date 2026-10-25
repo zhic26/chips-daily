@@ -176,6 +176,12 @@ section.block{padding:56px 0 6px}
 .exitbox table{margin-top:6px}
 .exitbox .fine{margin:8px 0 0;font-size:12.5px}
 .mini .st{font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+.plan{display:grid;gap:8px;margin:0 0 14px;padding:12px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line-soft)}
+.plan div{display:grid;grid-template-columns:5.2em minmax(0,1fr);gap:2px 10px;align-items:baseline}
+.plan .k{font-size:13px;color:var(--ink-3)}
+.plan b{font-weight:600;font-size:15px}
+.plan small{grid-column:2;font-size:12.5px;color:var(--ink-3)}
+.plan .pnote{margin:0;font-size:12px;color:var(--ink-3)}
 .mini.xt td:first-child{color:var(--ink);font-family:inherit;width:auto}
 .seg{display:inline-flex;padding:4px;background:var(--sunk);border-radius:13px;max-width:100%;overflow-x:auto;scrollbar-width:none}
 .seg::-webkit-scrollbar{display:none}
@@ -965,8 +971,9 @@ footer a{color:var(--ink-2)}
     var sold = one(items.filter(function (x) { return x.state === "sold"; }), true).sort(function (a, b) { return a.exit < b.exit ? 1 : -1; });
     var bt = (R.backtest || {}).rule || {}, b20 = (R.backtest || {}).hold20 || {};
     var box = h("div", { class: "exitbox" }, h("h3", null, "參考進出（依規則算出，不是買賣建議）"),
-      h("p", { class: "rule" }, "名單公布隔天開盤買；之後分數掉到同市場第 " + R.rank + " 名以後，隔天開盤賣；最多抱 " + R.max_days + " 個交易日。"));
-    if (sell.length) box.appendChild(h("div", { class: "sell" }, h("b", null, "照規則明天開盤要賣："),
+      h("p", { class: "rule" }, (E.buyDate ? md(E.buyDate) + "（" + wd(E.buyDate) + "）開盤買" : "名單公布隔天開盤買") + "；之後分數掉到同市場第 " + R.rank +
+        " 名以後，隔天開盤賣；最多抱 " + R.max_days + " 個交易日" + (E.lastDate ? "（" + (E.approx ? "約 " : "") + md(E.lastDate) + " 收盤）" : "") + "。點開每一檔可以看它的參考買點、賣點。"));
+    if (sell.length) box.appendChild(h("div", { class: "sell" }, h("b", null, "照規則" + (E.buyDate ? " " + md(E.buyDate) + "（" + wd(E.buyDate) + "）" : "明天") + "開盤要賣："),
       h("div", null, sell.map(function (x) {
         return h("span", { class: "s" }, x.name + " " + x.code + "｜" + md(x.date) + " 名單｜至今 " + pct(x.ret, 1));
       }))));
@@ -1059,7 +1066,14 @@ footer a{color:var(--ink-2)}
       pf.style.width = Math.min(100, p.penalty / 15 * 100) + "%";
       rows.push(h("div", { class: "part pen" }, h("span", null, "籌碼偏重"), h("span", { class: "track" }, pf), h("span", { class: "pts" }, "−" + p.penalty)));
     }
-    var left = h("div", null, h("p", { class: "reason" }, p.reason), h("div", { class: "parts" }, rows));
+    var E = D.exits || {}, R = E.rule || {}, rk = (E.rankNow || {})[p.code];
+    var plan = R.rank && E.buyDate ? h("div", { class: "plan" },
+      h("div", null, h("span", { class: "k" }, "參考買點"), h("b", null, md(E.buyDate) + "（" + wd(E.buyDate) + "）開盤買"),
+        h("small", null, "今天收盤 " + price(p.close) + " 元；回測都是用隔天開盤價計算")),
+      h("div", null, h("span", { class: "k" }, "參考賣點"), h("b", null, "分數掉到" + p.market + "第 " + R.rank + " 名以後，隔天開盤賣"),
+        h("small", null, (rk ? "現在全" + p.market + "第 " + rk + " 名；" : "") + "最晚 " + (E.approx ? "約 " : "") + md(E.lastDate) + "（" + wd(E.lastDate) + "）收盤賣，抱滿 " + R.max_days + " 個交易日")),
+      h("p", { class: "pnote" }, "依規則算出的參考，不是買賣建議。")) : null;
+    var left = h("div", null, plan, h("p", { class: "reason" }, p.reason), h("div", { class: "parts" }, rows));
     var facts = h("div", { class: "facts" },
       h("div", null, h("span", null, "季線乖離"), h("b", { class: dir(p.bias60) }, p.bias60 == null ? "—" : pct(p.bias60, 1))),
       h("div", null, h("span", null, "20 日漲跌"), h("b", { class: dir(p.ret20) }, p.ret20 == null ? "—" : pct(p.ret20, 1))),

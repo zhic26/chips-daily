@@ -13,7 +13,7 @@ import sys
 
 from chips import alerts as A
 from chips import macro as M
-from chips import model, site, store, track
+from chips import model, site, store, tcal, track
 from chips import sources as S
 from chips.checks import DataError, check_picks
 from chips.bigholders import BigProvider
@@ -328,6 +328,11 @@ def main():
     latest = store.picks_dates()[:1]
     if latest and track.record(store.load_picks(latest[0]), now):
         print(f"實盤紀錄：存下 {latest[0]} 的名單（下一個平日開盤後固定）")
+
+    try:  # 推算參考買進日、最晚賣出日用
+        tcal.refresh([today.year, today.year + 1], today, problems)
+    except Exception as e:
+        problems.append(f"證交所休市日期：{e!r}")
 
     try:  # 國際盤勢只是顯示用，任何錯誤都不擋住名單
         tw_close = {d.isoformat(): exs[d]["q"]["2330"][model.Q_CLOSE] for d in hist

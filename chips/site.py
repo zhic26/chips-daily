@@ -2,7 +2,7 @@
 import json
 import os
 
-from . import exits, store, track
+from . import exits, store, tcal, track
 from .model import BENCH, Q_OPEN
 from .perf import avg as _avg, hold as _hold, universe as _universe
 
@@ -101,7 +101,16 @@ def build(cfg, now):
         "track": track.summary(track.results(cfg), cfg),
     }
     st, items = exit_status(cfg)
-    data["exits"] = {"rule": cfg.get("exit"), "items": items}
+    rule = cfg.get("exit") or {}
+    years = (store.load_meta("holidays", {}) or {}).get("years") or {}
+    closed = (store.load_meta("nontrading", {}) or {}).get("dates") or []
+    d0 = dates[0]
+    buy, a1 = tcal.nth_trading_day(d0, 1, years, closed)
+    last, a2 = tcal.nth_trading_day(d0, rule.get("max_days", 60), years, closed)
+    ranking = latest.get("ranking") or {}
+    data["exits"] = {"rule": rule, "items": items, "buyDate": buy.isoformat(), "lastDate": last.isoformat(),
+                     "approx": a1 or a2,
+                     "rankNow": {c: i + 1 for mk in ranking for i, c in enumerate(ranking[mk])}}
     for x in data["history"]:
         for r in x["picks"]:
             s = st.get((x["date"], r["code"]))
