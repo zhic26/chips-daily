@@ -414,7 +414,7 @@ footer a{color:var(--ink-2)}
 
     <section class="block" id="picks" aria-labelledby="picks-h">
       <h2 id="picks-h">今日名單</h2>
-      <p class="lead">上市、上櫃分開計分，各取分數最高的 20 檔。一顆籌碼代表 5 分，顏色告訴你分數從哪裡來；虛線框的「籌碼偏重」是提醒，不扣分。點一下股票可以看明細。</p>
+      <p class="lead">上市、上櫃分開計分，各取分數最高的 20 檔。一顆籌碼代表 5 分，顏色告訴你分數從哪裡來；虛線框的標籤（籌碼偏重、注意股、處置中）是提醒，不扣分。點一下股票可以看明細。</p>
       <div id="picks-body"></div>
     </section>
 
@@ -576,14 +576,14 @@ footer a{color:var(--ink-2)}
     for (; n < 20; n++) el.appendChild(h("i", { class: "chip empty" }));
     return el;
   }
-  var TAGF = [[/偏重/, null], [/投信|外資/, "consistency"], [/大戶/, "big_holders"], [/融資/, "margin"], [/營收/, "revenue"], [/5 日/, "inst_5d"]];
+  var TAGF = [[/偏重|處置|注意/, null], [/投信|外資/, "consistency"], [/大戶/, "big_holders"], [/融資/, "margin"], [/營收/, "revenue"], [/5 日/, "inst_5d"]];
   function tag(t) {
     var f, matched = false;
     TAGF.forEach(function (x) { if (!matched && x[0].test(t)) { f = x[1]; matched = true; } });
     var dot = h("i");
     if (f) dot.style.setProperty("--c", "var(--f-" + f + ")");
     else if (/漲停/.test(t)) dot.style.setProperty("--c", "var(--up)");
-    return h("span", { class: "tag" + (/偏重/.test(t) ? " warn" : "") }, dot, t);
+    return h("span", { class: "tag" + (/偏重|處置|注意/.test(t) ? " warn" : "") }, dot, t);
   }
   function sparkline(series, w, ht) {
     var pts = series.filter(function (v) { return v != null; });
@@ -715,6 +715,7 @@ footer a{color:var(--ink-2)}
     if (L.marginPending && L.marginPending.length) notes.push(L.marginPending.join("、") + "的融資資料還沒公布，這一項暫時不計分，其他項目依比例放大回滿分。");
     if (L.tdcc && L.tdcc.mode === "none") notes.push("這次沒有取得集保大戶資料，千張大戶一項以中間值計分。");
     else if (L.tdcc && L.tdcc.missing) notes.push("有 " + L.tdcc.missing + " 檔缺少千張大戶週變化，這一項以中間值計分。");
+    if (L.alertsMissing && L.alertsMissing.length) notes.push(L.alertsMissing.join("、") + "的注意股公告這次沒有抓到，「注意股」標籤可能不完整。");
     notes.forEach(function (n) { body.appendChild(h("p", { class: "note" }, n)); });
 
     var counts = { "上市": 0, "上櫃": 0 };
@@ -955,7 +956,9 @@ footer a{color:var(--ink-2)}
         " 分；近 20 日已漲 " + c.runup_20d_pct[0] + "% 以上扣 " + c.points[0] + " 分、" + c.runup_20d_pct[1] + "% 以上扣 " + c.points[1] + " 分，最多扣 " + c.max_penalty + " 分。"))
       : h("li", null, h("i", { class: "chip warn" }), h("b", null, "籌碼偏重"), h("span", { class: "w txt" }, "只標示"),
         h("p", null, "近 5 日融資增加 " + c.margin_5d_pct[0] + "% 以上（且至少 " + fmt(c.margin_min_lots) + " 張），或近 20 日已漲 " + c.runup_20d_pct[0] +
-          "% 以上，會標上「籌碼偏重」。回測裡這類股票平均報酬沒有比較差，但漲跌起伏大，大部分會回檔、少數會再大漲，所以只提醒、不扣分。"))])));
+          "% 以上，會標上「籌碼偏重」。回測裡這類股票平均報酬沒有比較差，但漲跌起伏大，大部分會回檔、少數會再大漲，所以只提醒、不扣分。")),
+      h("li", null, h("i", { class: "chip warn" }), h("b", null, "注意股／處置中"), h("span", { class: "w txt" }, "只標示"),
+        h("p", null, "證交所、櫃買中心當天公布的注意股標「注意股」，連續被列會寫出天數（連續 3 個交易日通常就會被處置）；已公布處置、期間還沒結束的標「處置中」。處置期間要先付款才能買，而且每隔幾分鐘才撮合一次，買賣都不方便。這兩個標籤不影響分數。"))])));
     var t = L.tdcc || {};
     var prose = h("div", { class: "panel prose" },
       h("h3", null, "哪些股票會被算進來"),

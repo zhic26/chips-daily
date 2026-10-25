@@ -8,6 +8,7 @@ import http.cookiejar
 import re
 import urllib.request
 
+from .checks import DataError
 from .net import FetchError, fetch, get_json, get_text, decode
 
 TWSE = "https://www.twse.com.tw/rwd/zh"
@@ -58,6 +59,15 @@ def _col(fields, names, fallback):
             if f.startswith(n):
                 return i
     return fallback
+
+
+def _expect(fields, spec, what):
+    """用固定欄位位置解析的資料表，先確認那些位置的欄位名稱沒變；變了就是網站改版，丟出 DataError。"""
+    clean = [re.sub(r"<[^>]+>|\s", "", str(f)) for f in (fields or [])]
+    for i, name in spec.items():
+        if i >= len(clean) or not clean[i].startswith(name):
+            got = clean[i] if i < len(clean) else "（沒有這一欄）"
+            raise DataError(f"{what}第 {i + 1} 欄應該是「{name}」，現在是「{got}」，網站可能改版")
 
 
 def _get(url):
@@ -167,6 +177,7 @@ def twse_margin(d):
     t = next((t for t in _tables(j, "代號") if len(t.get("data") or []) > 50), None)
     if not t:
         return None, None
+    _expect(t.get("fields"), {0: "代號", 5: "前日餘額", 6: "今日餘額", 11: "前日餘額", 12: "今日餘額"}, "證交所融資融券")
     out = {}
     for r in t["data"]:
         code = str(r[0]).strip()
@@ -225,6 +236,8 @@ def tpex_inst(d):
     j = _get(f"{TPEX}/insti/dailyTrade?type=Daily&sect=EW&date={d:%Y/%m/%d}&response=json")
     if not j:
         return None
+    _expect(j["tables"][0].get("fields"), {0: "代號", 10: "買賣超股數", 13: "買賣超股數", 22: "買賣超股數", 23: "三大法人買賣超"},
+            "櫃買中心三大法人")
     out = {}
     for r in j["tables"][0]["data"]:
         code = str(r[0]).strip()
@@ -277,6 +290,7 @@ def tpex_margin(d):
     j = _get(f"{TPEX}/margin/balance?date={d:%Y/%m/%d}&response=json")
     if not j:
         return None
+    _expect(j["tables"][0].get("fields"), {0: "代號", 2: "前資餘額", 6: "資餘額", 10: "前券餘額", 14: "券餘額"}, "櫃買中心融資融券")
     out = {}
     for r in j["tables"][0]["data"]:
         code = str(r[0]).strip()
@@ -334,6 +348,154 @@ def mops_revenue(y, m):
                 if rev is not None:
                     out[td[0]] = [rev, ly]
     return out
+
+
+# ---------------- 注意股、處置股 ----------------
+
+def _roc_date(s):
+    """民國日期 "115.10.22"、"115/10/22"、"1151022" → date；看不懂回傳 None。"""
+    s = re.sub(r"<[^>]+>", "", str(s)).strip()
+    m = re.fullmatch(r"(\d{2,3})[./](\d{1,2})[./](\d{1,2})", s) or re.fullmatch(r"(\d{3})(\d{2})(\d{2})", s)
+    if not m:
+        return None
+    y, mo, dd = (int(x) for x in m.groups())
+    try:
+        return dt.date(y + 1911, mo, dd)
+    except ValueError:
+        return None
+
+
+def _period(s):
+    """處置起迄 "115/10/20～115/10/27"、"1151022~1151029" → (起, 迄)。"""
+    parts = re.split(r"\s*[~～]\s*", re.sub(r"<[^>]+>", "", str(s)).strip())
+    return (_roc_date(parts[0]), _roc_date(parts[1])) if len(parts) == 2 else (None, None)
+
+
+def _why(s):
+    """注意原因只留第一項，去掉「（第一款）」之類的條文編號。"""
+    s = re.sub(r"<[^>]+>", "", re.sub(r"<br\s*/?>", "；", str(s), flags=re.I))
+    s = re.sub(r"[﹝（(]第[一二三四五六七八九十]+款[﹞）)]", "", s)
+    s = re.split(r"[；。]", s)[0].strip()
+    return s if len(s) <= 45 else s[:44] + "…"
+
+
+def _cn_num(s):
+    s = s.translate(str.maketrans("０１２３４５６７８９", "0123456789"))
+    if s.isdigit():
+        return int(s)
+    d = {c: i for i, c in enumerate("零一二三四五六七八九")}
+    if "十" in s:
+        a, _, b = s.partition("十")
+        return (d.get(a, 1) if a else 1) * 10 + (d.get(b, 0) if b else 0)
+    return d.get(s)
+
+
+def _measure(text):
+    """處置內容裡的撮合間隔（分鐘）與是否要先收足款券。"""
+    t = re.sub(r"<[^>]+>", "", str(text))
+    m = re.search(r"約每\s*([0-9０-９一二三四五六七八九十]+)\s*分鐘撮合一次", t)
+    return (_cn_num(m.group(1)) if m else None), bool(re.search(r"收取全部之買進價金|預收", t))
+
+
+def _need_cols(fields, spec, what):
+    """spec：{key: [欄位名稱…]}。任何一個找不到就當作網站改版。"""
+    out = {}
+    for k, names in spec.items():
+        i = _col(fields, names, None)
+        if i is None:
+            raise DataError(f"{what}找不到「{names[0]}」欄位，網站可能改版")
+        out[k] = i
+    return out
+
+
+def _alert_rows(j, what, first_field=None):
+    """回傳 (欄位, 資料列)。網站回覆「沒有資料」時回傳空列；看不懂的回應丟出 DataError。"""
+    if not isinstance(j, dict):
+        raise DataError(f"{what}回應不是預期的格式")
+    stat = str(j.get("stat", ""))
+    if "tables" in j:
+        for t in _tables(j, first_field):
+            return t.get("fields") or [], t.get("data") or []
+        if stat.lower() == "ok" and not any(t.get("data") for t in j["tables"] if isinstance(t, dict)):
+            return [], []
+        raise DataError(f"{what}找不到資料表，網站可能改版")
+    if stat.upper() == "OK":
+        return j.get("fields") or [], j.get("data") or []
+    if "沒有符合" in stat or "查無" in stat:
+        return [], []
+    raise DataError(f"{what}回應看不懂：{stat[:40]}")
+
+
+def _notice(rows, f, what):
+    if not rows:
+        return {}
+    c = _need_cols(f, {"code": ["證券代號"], "why": ["注意交易資訊"], "date": ["日期", "公告日期"]}, what)
+    out = {}
+    for r in rows:
+        code, d = str(r[c["code"]]).strip(), _roc_date(r[c["date"]])
+        if d is None:
+            raise DataError(f"{what}的日期看不懂：{r[c['date']]}")
+        if is_common_stock(code):
+            out.setdefault(d.isoformat(), {})[code] = _why(r[c["why"]])
+    return out
+
+
+def twse_notice(start, end):
+    """證交所公布的注意股：{日期: {代號: 原因}}。沒有注意股的日子不會出現在結果裡。"""
+    what = "證交所注意股"
+    j = get_json(f"{TWSE}/announcement/notice?querytype=1&stockNo=&selectType=&startDate={start:%Y%m%d}"
+                 f"&endDate={end:%Y%m%d}&response=json")
+    f, rows = _alert_rows(j, what)
+    prm = j.get("params") or {}
+    if prm and (prm.get("startDate"), prm.get("endDate")) != (f"{start:%Y%m%d}", f"{end:%Y%m%d}"):
+        raise DataError(f"{what}回傳的日期範圍不是查詢的範圍")
+    return _notice(rows, f, what)
+
+
+def tpex_notice(start, end):
+    what = "櫃買中心注意股"
+    j = get_json(f"{TPEX}/bulletin/attention?startDate={start:%Y/%m/%d}&endDate={end:%Y/%m/%d}&response=json")
+    f, rows = _alert_rows(j, what)
+    if rows and j.get("date") and j["date"] != f"{start:%Y%m%d}~{end:%Y%m%d}":
+        raise DataError(f"{what}回傳的日期範圍 {j['date']} 不是查詢的範圍")
+    return _notice(rows, f, what)
+
+
+def _punish(rows, f, what, spec):
+    if not rows:
+        return []
+    c = _need_cols(f, spec, what)
+    out = []
+    for r in rows:
+        code = str(r[c["code"]]).strip()
+        if not is_common_stock(code):
+            continue
+        ann = _roc_date(r[c["ann"]])
+        start, end = _period(r[c["period"]])
+        if not (ann and start and end):
+            raise DataError(f"{what}的日期看不懂：{r[c['ann']]} {r[c['period']]}")
+        mins, prepay = _measure(r[c["detail"]])
+        out.append({"code": code, "ann": ann.isoformat(), "start": start.isoformat(), "end": end.isoformat(),
+                    "step": re.sub(r"<[^>]+>", "", str(r[c["step"]])).strip(), "mins": mins, "prepay": prepay})
+    return out
+
+
+def twse_punish(start, end):
+    """證交所處置股（依公布日期查詢）：[{code, ann 公布日, start, end 處置起迄, step 第幾次處置, mins 撮合間隔, prepay 是否先收款}]"""
+    what = "證交所處置股"
+    j = get_json(f"{TWSE}/announcement/punish?querytype=3&stockNo=&selectType=&proceType=&remarkType="
+                 f"&startDate={start:%Y%m%d}&endDate={end:%Y%m%d}&response=json")
+    f, rows = _alert_rows(j, what)
+    return _punish(rows, f, what, {"code": ["證券代號"], "ann": ["公布日期"], "period": ["處置起迄時間", "處置起訖時間"],
+                                   "step": ["處置措施"], "detail": ["處置內容"]})
+
+
+def tpex_punish(start, end):
+    what = "櫃買中心處置股"
+    j = get_json(f"{TPEX}/bulletin/disposal?startDate={start:%Y/%m/%d}&endDate={end:%Y/%m/%d}&response=json")
+    f, rows = _alert_rows(j, what)
+    return _punish(rows, f, what, {"code": ["證券代號"], "ann": ["公布日期"], "period": ["處置起訖時間", "處置起迄時間"],
+                                   "step": ["處置措施"], "detail": ["處置內容"]})
 
 
 # ---------------- 集保結算所 ----------------

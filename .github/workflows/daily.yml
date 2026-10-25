@@ -29,6 +29,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: 程式自我測試（不連網，沒過就不更新）
+        run: python -m unittest discover -s tests -t .
+
       - name: 下載資料、計算分數、產生網頁
         env:
           TARGET_DATE: ${{ inputs.date }}

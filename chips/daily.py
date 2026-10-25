@@ -5,6 +5,7 @@
 尚未公布的資料（例如晚上 9 點半前的融資融券）會記在 pending，下次執行再補抓。
 """
 from . import sources as S
+from .checks import check_day
 from .net import FetchError
 
 SOURCES = ["twse_inst", "twse_quotes", "tpex_inst", "tpex_quotes", "tpex_index", "twse_flows",
@@ -118,6 +119,7 @@ def fetch_day(d, companies, existing=None):
         return None  # 法人有、行情沒有：資料還沒公布完整，先不存
     if changed or fresh:
         _stamp(ex)
+        check_day(ex)  # 欄位錯位、筆數太少就丟出 DataError，這天不存
     return ex
 
 
@@ -138,6 +140,7 @@ def fetch_light(d, companies, with_flows):
         if not ok:
             ex["pending"].append(src)
     _stamp(ex)
+    check_day(ex)
     return ex
 
 

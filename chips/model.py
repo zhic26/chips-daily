@@ -1,7 +1,7 @@
 """籌碼評分、大盤體溫與各種排行。輸入是 data/daily 的每日盤後資料，輸出是一天的結果。"""
 from .sources import INDUSTRY
 
-MODEL_VERSION = 4  # 計分方式改版時加一，舊的名單會在下次執行時用新方式重算
+MODEL_VERSION = 5  # 計分方式改版時加一，舊的名單會在下次執行時用新方式重算
 LOT = 1000
 MARKETS = ("上市", "上櫃")
 INDEX_ORDER = ["加權指數", "櫃買指數", "半導體", "電子", "金融", "航運", "生技"]
@@ -245,6 +245,11 @@ def score_market(rows, w, big_lookup, cfg):
 
 def tags_for(x):
     t = []
+    a = x.get("alert") or {}
+    if a.get("punish"):
+        t.append("處置中")
+    elif a.get("notice"):
+        t.append(f"連續注意 {a['notice']} 天" if a["notice"] >= 2 else "注意股")
     if x.get("crowd"):
         t.append(f"籌碼偏重 −{x['penalty']}" if x.get("penalty") else "籌碼偏重")
     if x["trustStreak"] >= 3:
@@ -264,8 +269,29 @@ def tags_for(x):
     return t
 
 
+def _md(iso):
+    return f"{int(iso[5:7])}/{int(iso[8:10])}"
+
+
+def alert_text(a):
+    """注意股、處置股的說明（放在名單理由最前面）。"""
+    s = []
+    p = a.get("punish")
+    if p:
+        how = [f"約每 {p['mins']} 分鐘撮合一次" if p.get("mins") else "改成分盤撮合"]
+        if p.get("prepay"):
+            how.append("買進要先付清款項")
+        s.append(f"處置股（{p['step'] or '處置'}，{_md(p['start'])}～{_md(p['end'])}）：期間{'、'.join(how)}，成交慢、價格容易跳動")
+    if a.get("notice"):
+        t = f"今天被列為注意股：{a['why']}" if a.get("why") else "今天被列為注意股"
+        if a["notice"] >= 2:
+            t += f"；已連續 {a['notice']} 個交易日，連續 3 個交易日通常就會被處置"
+        s.append(t)
+    return s
+
+
 def reason_for(x):
-    s = [f"三大法人買超 {x['instNet']:,} 張（外資 {x['foreignNet']:+,}、投信 {x['trustNet']:+,}、自營 {x['dealerNet']:+,}）",
+    s = alert_text(x.get("alert") or {}) + [f"三大法人買超 {x['instNet']:,} 張（外資 {x['foreignNet']:+,}、投信 {x['trustNet']:+,}、自營 {x['dealerNet']:+,}）",
          f"近 5 日累計 {x['inst5d']:+,} 張，約 5 日均量的 {x['inst5d'] / max(1, x['avgVol']):.1f} 倍"]
     if x.get("bigPct") is not None:
         t = f"千張大戶持股 {x['bigPct']:.2f}%"
@@ -414,14 +440,17 @@ def temp_read(t):
     return read
 
 
-def compute_day(days, exs, cfg, companies, big_provider, history, revenue=None):
+def compute_day(days, exs, cfg, companies, big_provider, history, revenue=None, alerts=None):
     """計算 days[0] 這一天的選股、排行與大盤體溫。days：新到舊的完整資料交易日。"""
     d0 = days[0]
     e0 = exs[d0]
     rows = stock_rows(days, exs, cfg, companies, history)
     growth, rev_months = revenue_growth(d0, revenue)
+    alert, alerts_missing = alerts if alerts else ({}, ["上市", "上櫃"])
     for x in rows:
         x["rev3"] = growth.get(x["code"])
+        if x["code"] in alert:
+            x["alert"] = alert[x["code"]]
     lookup = big_provider.lookup_for(d0)
     picks = []
     universe, eff = {}, {}
@@ -447,6 +476,7 @@ def compute_day(days, exs, cfg, companies, big_provider, history, revenue=None):
         "revenueMonths": rev_months,
         "marginPending": pending_margin,
         "pending": e0["pending"],
+        "alertsMissing": alerts_missing,
         "universe": universe,
         "weights": cfg["weights"],
         "effectiveWeights": eff,

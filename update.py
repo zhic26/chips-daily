@@ -11,11 +11,15 @@ import datetime as dt
 import json
 import sys
 
+from chips import alerts as A
 from chips import model, site, store
 from chips import sources as S
+from chips.checks import DataError, check_picks
 from chips.bigholders import BigProvider
 from chips.daily import backfill_market, fetch_day, fetch_light
 from chips.net import FetchError
+
+STALE_WEEKDAYS = 8  # 超過這麼多個平日都沒抓到新資料，就當作出問題（農曆年連假最長約 7 個平日）
 
 DEFAULTS = {
     "site": {"title": "籌碼日報", "tagline": "每個交易日盤後，用三大法人、千張大戶與融資變化篩出上市、上櫃各 20 檔。"},
@@ -204,17 +208,34 @@ def main():
         days, exs = collect_days(target, need, cal, comp)
         if len(days) < cfg["lookback_days"]:
             sys.exit("找不到足夠的交易日資料")
+        gap = sum(1 for k in range(1, (target - days[0]).days + 1) if (days[0] + dt.timedelta(days=k)).weekday() < 5)
+        if gap > STALE_WEEKDAYS:
+            raise DataError(f"最新資料停在 {days[0]}，已經 {gap} 個平日沒有新資料（連假最多約 7 天），"
+                            "可能是網站改版，讓每天都被當成休市")
         hist = ensure_history(days[0], cfg["market_history_days"] + backfill - 1, cal, comp, exs)
     except FetchError as e:
         cal.save()
         sys.exit(f"證交所資料下載失敗：{e}")
+    except DataError as e:
+        sys.exit(f"資料檢查沒通過，這次不更新名單（請檢查官方網站是否改版）：{e}")
     cal.save()
     print("交易日：", " ".join(f"{d:%m/%d}" for d in days))
 
     full = [d for d in hist if not exs[d].get("light")]  # 有完整資料的日子（算連買天數用）
+    problems = []  # 不影響分數、但格式看起來不對的資料：名單照常更新，最後讓這次執行顯示失敗以便通知
+
+    try:
+        al, bad = A.update(full[:backfill + 5], now)
+        problems += bad
+    except Exception as e:  # 注意／處置股只是標籤，任何錯誤都不擋住名單
+        al = None
+        problems.append(f"注意／處置股：{e!r}")
 
     try:
         week, big, tdcc_full = S.tdcc_latest()
+        if week and (len(big) < 1500 or not all(0 <= v <= 100 for v in big.values())):
+            problems.append(f"集保開放資料只有 {len(big)} 檔或比例超出 0～100，這週先不存")
+            week = None
         if week and tdcc_full and store.save_tdcc_full(week, tdcc_full):
             print(f"集保：存入 {week} 股東人數與級距（{len(tdcc_full)} 檔）")
         if week and store.save_tdcc(week, big):
@@ -230,8 +251,13 @@ def main():
         if i > 0 and old and old.get("model") == model.MODEL_VERSION:
             continue
         streak_days = [x for x in full if x <= d][:STREAK_DAYS]
-        doc = model.compute_day(streak_days, exs, cfg, comp, provider, history, revenue)
+        doc = model.compute_day(streak_days, exs, cfg, comp, provider, history, revenue,
+                                alerts=A.for_day(al, d, full) if al else None)
         doc["generatedAt"] = now.isoformat(timespec="minutes")
+        try:
+            check_picks(doc, cfg)
+        except DataError as e:
+            sys.exit(f"名單檢查沒通過，這次不更新：{e}")
         if same(doc, old):
             print(f"{d} 結果沒有變化")
             continue
@@ -251,6 +277,11 @@ def main():
 
     site.build(cfg, now)
     store.prune_daily(cfg["keep_daily_days"])
+    if problems:
+        print("名單已更新，但有資料格式看起來不對（請檢查官方網站是否改版）：")
+        for x in problems:
+            print("  -", x)
+        sys.exit(1)
     print("完成")
 
 
