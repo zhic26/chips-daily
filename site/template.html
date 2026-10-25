@@ -18,7 +18,7 @@
   --line:#E1E4EA; --line-soft:#EBEDF1;
   --up:#D62F3C; --down:#0E8C52; --flat:#868C9B;
   --accent:#2C47B8;
-  --f-inst_today:#22378F; --f-inst_5d:#4C68D2; --f-consistency:#98ACEC; --f-big_holders:#C1922F; --f-margin:#8053C2;
+  --f-inst_today:#22378F; --f-inst_5d:#4C68D2; --f-consistency:#98ACEC; --f-big_holders:#C1922F; --f-margin:#8053C2; --f-revenue:#C2506A;
   --shadow:0 1px 2px rgba(17,20,27,.04),0 8px 28px rgba(17,20,27,.06);
   --radius:20px;
   --num:"Barlow Semi Condensed","Roboto Condensed","Arial Narrow",system-ui,sans-serif;
@@ -38,7 +38,7 @@
     --line:#252B38; --line-soft:#1D222D;
     --up:#FF5463; --down:#31D383; --flat:#7F8695;
     --accent:#90A4F6;
-    --f-inst_today:#6F84F0; --f-inst_5d:#98ABF7; --f-consistency:#C8D3FB; --f-big_holders:#E2B24C; --f-margin:#B38CF2;
+    --f-inst_today:#6F84F0; --f-inst_5d:#98ABF7; --f-consistency:#C8D3FB; --f-big_holders:#E2B24C; --f-margin:#B38CF2; --f-revenue:#EE8BA0;
     --shadow:0 1px 2px rgba(0,0,0,.35),0 12px 32px rgba(0,0,0,.28);
   }
 }
@@ -202,7 +202,7 @@ section.block{padding:56px 0 6px}
 .chip.warn{background:none;box-shadow:none;border:1px dashed var(--ink-3)}
 .chip.pen{background:repeating-linear-gradient(135deg,var(--ink-3) 0 1.2px,transparent 1.2px 3.2px);box-shadow:inset 0 0 0 1px var(--ink-3)}
 .f-inst_today{--c:var(--f-inst_today)} .f-inst_5d{--c:var(--f-inst_5d)} .f-consistency{--c:var(--f-consistency)}
-.f-big_holders{--c:var(--f-big_holders)} .f-margin{--c:var(--f-margin)}
+.f-big_holders{--c:var(--f-big_holders)} .f-margin{--c:var(--f-margin)} .f-revenue{--c:var(--f-revenue)}
 .stack{display:flex;align-items:center;gap:3px}
 .stack .chip:nth-child(5n):not(:last-child){margin-right:4px}
 @media (prefers-reduced-motion:no-preference){
@@ -392,7 +392,7 @@ footer a{color:var(--ink-2)}
     <div class="wrap">
       <div>
         <h1 lang="en"><span>Follow the</span><span>smart money.</span></h1>
-        <p class="hero-sub">每個交易日晚上，整理三大法人、千張大戶與融資的變化，上市、上櫃各挑 20 檔籌碼最集中的股票。</p>
+        <p class="hero-sub">每個交易日晚上，整理三大法人、千張大戶、融資的變化，再加上月營收成長，上市、上櫃各挑 20 檔。</p>
         <div class="cta">
           <a class="btn primary" href="#picks">看今日名單</a>
           <a class="btn ghost glass" href="#temp">大盤體溫</a>
@@ -432,7 +432,7 @@ footer a{color:var(--ink-2)}
 
     <section class="block" id="method" aria-labelledby="method-h">
       <h2 id="method-h">分數怎麼算</h2>
-      <p class="lead">每項指標先在同一個市場的股票裡排名，換算成 0～1 的百分位，再乘上權重，五項加起來滿分 100。權重依 2024 年 10 月到 2026 年 10 月的回測調整過。</p>
+      <p class="lead">每項指標先在同一個市場的股票裡排名，換算成 0～1 的百分位，再乘上權重，六項加起來滿分 100。權重依 2024 年 10 月到 2026 年 10 月的回測調整過。</p>
       <div id="method-body"></div>
     </section>
 
@@ -482,8 +482,8 @@ footer a{color:var(--ink-2)}
 (function () {
   "use strict";
   var D = DATA || {}, L = D.latest || {}, SITE = D.site || {};
-  var FK = ["inst_today", "inst_5d", "consistency", "big_holders", "margin"];
-  var FN = { inst_today: "法人今日買超", inst_5d: "法人 5 日累計", consistency: "法人買超天數", big_holders: "千張大戶週增減", margin: "融資 5 日減少" };
+  var FK = ["inst_today", "inst_5d", "consistency", "big_holders", "margin", "revenue"];
+  var FN = { inst_today: "法人今日買超", inst_5d: "法人 5 日累計", consistency: "法人買超天數", big_holders: "千張大戶週增減", margin: "融資 5 日減少", revenue: "營收成長" };
   var MK = ["上市", "上櫃"];
   var BENCH = { "上市": "加權", "上櫃": "櫃買" };
   var WD = "日一二三四五六";
@@ -576,7 +576,7 @@ footer a{color:var(--ink-2)}
     for (; n < 20; n++) el.appendChild(h("i", { class: "chip empty" }));
     return el;
   }
-  var TAGF = [[/偏重/, null], [/投信|外資/, "consistency"], [/大戶/, "big_holders"], [/融資/, "margin"], [/5 日/, "inst_5d"]];
+  var TAGF = [[/偏重/, null], [/投信|外資/, "consistency"], [/大戶/, "big_holders"], [/融資/, "margin"], [/營收/, "revenue"], [/5 日/, "inst_5d"]];
   function tag(t) {
     var f, matched = false;
     TAGF.forEach(function (x) { if (!matched && x[0].test(t)) { f = x[1]; matched = true; } });
@@ -811,7 +811,8 @@ footer a{color:var(--ink-2)}
     var facts = h("div", { class: "facts" },
       h("div", null, h("span", null, "季線乖離"), h("b", { class: dir(p.bias60) }, p.bias60 == null ? "—" : pct(p.bias60, 1))),
       h("div", null, h("span", null, "20 日漲跌"), h("b", { class: dir(p.ret20) }, p.ret20 == null ? "—" : pct(p.ret20, 1))),
-      h("div", null, h("span", null, "融資 5 日"), h("b", { class: dir(p.marginUp5) }, p.marginUp5 == null ? "—" : pct(p.marginUp5, 1))));
+      h("div", null, h("span", null, "融資 5 日"), h("b", { class: dir(p.marginUp5) }, p.marginUp5 == null ? "—" : pct(p.marginUp5, 1))),
+      h("div", null, h("span", null, "近 3 月營收年增"), h("b", { class: dir(p.rev3) }, p.rev3 == null ? "—" : pct(p.rev3, 1))));
     var tdays = (L.tradingDays || []).slice(0, (p.instHist || []).length);
     var table = h("table", { class: "days" },
       h("thead", null, h("tr", null, h("th", null, "日期"), h("th", null, "收盤"), h("th", null, "法人買賣超（張）"))),
@@ -937,13 +938,14 @@ footer a{color:var(--ink-2)}
   // ---------- 分數怎麼算 ----------
   function renderMethod() {
     var body = document.getElementById("method-body");
-    var w = L.weights || { inst_today: 10, inst_5d: 15, consistency: 30, big_holders: 25, margin: 20 };
+    var w = L.weights || { inst_today: 10, inst_5d: 10, consistency: 30, big_holders: 15, margin: 15, revenue: 20 };
     var f = L.filters || {}, c = L.crowding || { margin_5d_pct: [10, 20], margin_min_lots: 300, runup_20d_pct: [30, 50], points: [5, 10], max_penalty: 15 };
     var desc = {
       inst_today: "當天三大法人買超張數 ÷ 近 5 日平均成交量。用比例而不是張數，大型股和中小型股才比得公平。回測裡單日買超的預測力很弱，所以權重較低。",
       inst_5d: "近 5 個交易日三大法人累計買超 ÷ 5 日總成交量，看的是持續性，不只是一天。",
       consistency: "近 5 日外資買超的天數，加上投信買超天數 × 1.5。回測裡這是最有預測力的一項，持續買進比單日買很多更有意義，投信連續買特別明顯。",
       big_holders: "集保資料中持股超過 1,000 張的股東，持股比例比前一週增加 1 個百分點以上給滿分，減少 1 個百分點以上給 0 分，中間依比例。",
+      revenue: "最近 3 個月營收比去年同期成長的幅度，成長越多分數越高；沒有營收資料的給中間值。每月 10 日前公司要公布上個月營收，所以 11 日起才換用新月份。回測裡加進這項後，名單 5 日和 20 日的表現都明顯變好。",
       margin: "近 5 個交易日融資餘額增減的張數 ÷ 5 日均量，減少越多分數越高。融資多半是散戶，融資減少代表籌碼往法人、大戶集中；只看單日的效果比看 5 日差。"
     };
     var factors = h("div", { class: "panel" }, h("ul", { class: "factors" }, FK.map(function (k) {
@@ -975,6 +977,7 @@ footer a{color:var(--ink-2)}
       h("ul", null,
         h("li", null, h("a", { href: "https://www.twse.com.tw/", target: "_blank", rel: "noopener" }, "臺灣證券交易所"), "：三大法人、收盤行情與指數、融資融券、當日沖銷、三大法人買賣金額、公司基本資料"),
         h("li", null, h("a", { href: "https://www.tpex.org.tw/", target: "_blank", rel: "noopener" }, "證券櫃檯買賣中心"), "：上櫃三大法人、行情、櫃買指數、融資融券、當日沖銷"),
+        h("li", null, h("a", { href: "https://mops.twse.com.tw/", target: "_blank", rel: "noopener" }, "公開資訊觀測站"), "：上市櫃公司每月營業收入"),
         h("li", null, h("a", { href: "https://www.tdcc.com.tw/portal/zh/smWeb/qryStock", target: "_blank", rel: "noopener" }, "臺灣集中保管結算所"), "：集保戶股權分散表")));
     body.appendChild(h("div", { class: "method-grid" }, factors, prose));
   }

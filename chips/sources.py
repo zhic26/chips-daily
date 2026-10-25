@@ -308,6 +308,34 @@ def tpex_companies():
     return out
 
 
+# ---------------- 公開資訊觀測站：月營收 ----------------
+
+def mops_revenue(y, m):
+    """某年某月的月營收彙總表（上市、上櫃，含外國公司）：{代號: [當月營收, 去年當月營收]}，單位千元。
+    抓不到回傳空 dict（例如還沒公布）。"""
+    out = {}
+    for mk in ("sii", "otc"):
+        for k in (0, 1):
+            raw = None
+            for host in ("https://mopsov.twse.com.tw", "https://mops.twse.com.tw"):
+                try:
+                    raw = fetch(f"{host}/nas/t21/{mk}/t21sc03_{y - 1911}_{m}_{k}.html", retries=2, timeout=60)
+                    break
+                except FetchError:
+                    continue
+            if raw is None:
+                continue
+            html = raw.decode("cp950", errors="replace")
+            for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", html, flags=re.S | re.I):
+                td = [re.sub(r"<[^>]+>|&nbsp;|\s", "", x) for x in re.findall(r"<td[^>]*>(.*?)</td>", tr, flags=re.S | re.I)]
+                if len(td) < 10 or not re.fullmatch(r"\d{4}", td[0]):
+                    continue
+                rev, ly = num(td[2]), num(td[4])
+                if rev is not None:
+                    out[td[0]] = [rev, ly]
+    return out
+
+
 # ---------------- 集保結算所 ----------------
 
 def tdcc_latest():

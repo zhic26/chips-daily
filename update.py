@@ -32,7 +32,7 @@ DEFAULTS = {
     "market_history_days": 80,   # 算季線（60 日均線）和近 20 日趨勢需要的交易日數
     "keep_daily_days": 85,
     # 權重依 2024/10～2026/10 回測調整：連買天數最有用、買超張數幾乎沒有預測力，融資看近 5 日
-    "weights": {"inst_today": 10, "inst_5d": 15, "consistency": 30, "big_holders": 25, "margin": 20},
+    "weights": {"inst_today": 10, "inst_5d": 10, "consistency": 30, "big_holders": 15, "margin": 15, "revenue": 20},
     # 籌碼偏重：融資 5 日增幅、20 日漲幅超過門檻就標示；deduct=true 才會扣分（回測扣分沒有提高報酬）
     "crowding": {"margin_5d_pct": [10, 20], "margin_min_lots": 300, "runup_20d_pct": [30, 50], "points": [5, 10],
                  "max_penalty": 15, "deduct": False},
@@ -73,6 +73,29 @@ def companies():
     except Exception as e:
         print("公司基本資料下載失敗，沿用舊資料：", e)
     return data
+
+
+def revenue_update(today):
+    """月營收：每月 10 日前公布上個月的數字，11 日起才抓並使用（和回測的規則一樣）。回傳 {YYYY-MM: {代號: [營收, 去年同月]}}。"""
+    have = set(store.revenue_months())
+    y, m = today.year, today.month
+    for back in range(1, 5):  # 最近 4 個已過公布期限的月份
+        yy, mm = y, m - back
+        while mm <= 0:
+            yy, mm = yy - 1, mm + 12
+        ym = f"{yy}-{mm:02d}"
+        due = dt.date(yy + (mm == 12), mm % 12 + 1, 11)
+        if ym in have or today < due:
+            continue
+        try:
+            data = S.mops_revenue(yy, mm)
+        except Exception as e:  # 公開資訊觀測站暫時連不上：下次再補
+            print(f"月營收 {ym} 下載失敗：{e}")
+            continue
+        if len(data) > 1000:
+            store.save_revenue(ym, {"ym": ym, "fetchedAt": today.isoformat(), "data": data})
+            print(f"月營收：存入 {ym}（{len(data)} 家）")
+    return {ym: (store.load_revenue(ym) or {}).get("data", {}) for ym in store.revenue_months()[-6:]}
 
 
 class Calendar:
@@ -170,6 +193,7 @@ def main():
     today = now.date()
     target = dt.date.fromisoformat(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].strip() else today
     comp = companies()
+    revenue = revenue_update(today)
     cal = Calendar(today)
 
     recent = store.picks_dates()[:cfg["backfill_days"]]
@@ -204,7 +228,7 @@ def main():
         if i > 0 and old and old.get("model") == model.MODEL_VERSION:
             continue
         streak_days = [x for x in full if x <= d][:STREAK_DAYS]
-        doc = model.compute_day(streak_days, exs, cfg, comp, provider, history)
+        doc = model.compute_day(streak_days, exs, cfg, comp, provider, history, revenue)
         doc["generatedAt"] = now.isoformat(timespec="minutes")
         if same(doc, old):
             print(f"{d} 結果沒有變化")

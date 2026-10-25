@@ -1,7 +1,7 @@
 """籌碼評分、大盤體溫與各種排行。輸入是 data/daily 的每日盤後資料，輸出是一天的結果。"""
 from .sources import INDUSTRY
 
-MODEL_VERSION = 3  # 計分方式改版時加一，舊的名單會在下次執行時用新方式重算
+MODEL_VERSION = 4  # 計分方式改版時加一，舊的名單會在下次執行時用新方式重算
 LOT = 1000
 MARKETS = ("上市", "上櫃")
 INDEX_ORDER = ["加權指數", "櫃買指數", "半導體", "電子", "金融", "航運", "生技"]
@@ -110,6 +110,25 @@ class History:
         return self._breadth[key]
 
 
+def revenue_growth(d0, revenue):
+    """選股日 d0 可用的最近 3 個月營收比去年同期的成長率（%）：{代號: 成長率}。
+    第 M 月的營收在 M+1 月 11 日以後才算已公布（申報期限是 10 日）。"""
+    def due(ym):
+        y, m = int(ym[:4]), int(ym[5:])
+        return (y + (m == 12), m % 12 + 1, 11)
+    usable = [ym for ym in sorted(revenue or {}) if due(ym) <= (d0.year, d0.month, d0.day)][-3:]
+    if len(usable) < 3:
+        return {}, usable
+    out = {}
+    for code, v in revenue[usable[-1]].items():
+        rows = [revenue[ym].get(code) for ym in usable]
+        if all(r and r[0] is not None and r[1] for r in rows):
+            ly = sum(r[1] for r in rows)
+            if ly > 0:
+                out[code] = round((sum(r[0] for r in rows) / ly - 1) * 100, 1)
+    return out, usable
+
+
 def stock_rows(days, exs, cfg, companies, history):
     """days：新到舊的完整資料交易日，第一天是選股日。回傳通過流動性門檻的股票（含各項原始指標）。"""
     L = cfg["lookback_days"]
@@ -193,9 +212,14 @@ def score_market(rows, w, big_lookup, cfg):
     r5 = pct_rank([x["inst5d"] / (x["_avg"] * x["_n"]) for x in rows])
     rc = pct_rank([x["foreignDays"] + 1.5 * x["trustDays"] for x in rows])
     rm = pct_rank([-(x["marginAdd5"] if x["marginAdd5"] is not None else 0) / x["_avg"] for x in rows])
-    for x, a, b, c, m in zip(rows, r1, r5, rc, rm):
+    have = [i for i, x in enumerate(rows) if x.get("rev3") is not None]
+    rr = [0.5] * len(rows)  # 沒有營收資料（新上市、剛轉板等）給中間值
+    for i, v in zip(have, pct_rank([rows[i]["rev3"] for i in have])):
+        rr[i] = v
+    for x, a, b, c, m, rv in zip(rows, r1, r5, rc, rm, rr):
         x["parts"] = {"inst_today": a * w["inst_today"], "inst_5d": b * w["inst_5d"],
-                      "consistency": c * w["consistency"], "margin": m * w["margin"], "big_holders": 0.0}
+                      "consistency": c * w["consistency"], "margin": m * w["margin"], "big_holders": 0.0,
+                      "revenue": rv * w.get("revenue", 0)}
         pts, x["crowd"] = crowding(x, cfg["crowding"])
         x["penalty"] = pts if cfg["crowding"].get("deduct") else 0
         x["_pre"] = sum(x["parts"].values()) - x["penalty"]
@@ -233,6 +257,8 @@ def tags_for(x):
         t.append("融資大減")
     if x["inst5d"] > x["avgVol"]:
         t.append("5 日買超大於均量")
+    if x.get("rev3") is not None and x["rev3"] >= 25:
+        t.append(f"營收年增 {x['rev3']:.0f}%")
     if x["chgPct"] >= 9.5:
         t.append("漲停")
     return t
@@ -248,6 +274,8 @@ def reason_for(x):
         s.append(t)
     if x.get("marginAdd5"):
         s.append(f"融資近 5 日{'減少' if x['marginAdd5'] < 0 else '增加'} {abs(x['marginAdd5']):,} 張")
+    if x.get("rev3") is not None:
+        s.append(f"近 3 個月營收比去年同期{'成長' if x['rev3'] >= 0 else '衰退'} {abs(x['rev3']):.1f}%")
     if x.get("crowd"):
         s.append(("籌碼偏重扣 " + str(x["penalty"]) + " 分：" if x.get("penalty") else "籌碼偏重：") + "、".join(x["crowd"]))
     return "；".join(s).replace("-", "−") + "。"
@@ -386,11 +414,14 @@ def temp_read(t):
     return read
 
 
-def compute_day(days, exs, cfg, companies, big_provider, history):
+def compute_day(days, exs, cfg, companies, big_provider, history, revenue=None):
     """計算 days[0] 這一天的選股、排行與大盤體溫。days：新到舊的完整資料交易日。"""
     d0 = days[0]
     e0 = exs[d0]
     rows = stock_rows(days, exs, cfg, companies, history)
+    growth, rev_months = revenue_growth(d0, revenue)
+    for x in rows:
+        x["rev3"] = growth.get(x["code"])
     lookup = big_provider.lookup_for(d0)
     picks = []
     universe, eff = {}, {}
@@ -413,6 +444,7 @@ def compute_day(days, exs, cfg, companies, big_provider, history):
         "date": d0.isoformat(),
         "tradingDays": [x.isoformat() for x in days[:cfg["lookback_days"]]],
         "tdcc": lookup.describe(),
+        "revenueMonths": rev_months,
         "marginPending": pending_margin,
         "pending": e0["pending"],
         "universe": universe,

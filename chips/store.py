@@ -91,6 +91,20 @@ def save_tdcc_query(week, data):
 
 # ---- 選股結果 ----
 
+def revenue_months():
+    """已存的月營收月份（YYYY-MM），舊到新。"""
+    d = os.path.join(DATA, "revenue")
+    return sorted(f[:7] for f in os.listdir(d) if f.endswith(".json")) if os.path.isdir(d) else []
+
+
+def load_revenue(ym):
+    return _read(os.path.join(DATA, "revenue", f"{ym}.json"))
+
+
+def save_revenue(ym, obj):
+    _write(os.path.join(DATA, "revenue", f"{ym}.json"), obj)
+
+
 def picks_path(d):
     return os.path.join(PICKS, f"{iso(d)}.json")
 
