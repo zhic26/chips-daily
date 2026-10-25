@@ -17,6 +17,7 @@ MIN_GAP = {
     "www.tpex.org.tw": 2.5,
     "opendata.tdcc.com.tw": 1.0,
     "www.tdcc.com.tw": 0.8,
+    "www.taifex.com.tw": 2.0,
 }
 _last_hit = {}
 

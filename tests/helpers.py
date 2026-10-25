@@ -13,7 +13,7 @@ ROUTES = {
     "fund/T86": "twse_T86", "afterTrading/MI_INDEX": "twse_MI_INDEX", "marginTrading/MI_MARGN": "twse_MI_MARGN",
     "insti/dailyTrade": "tpex_insti", "afterTrading/otc": "tpex_otc", "margin/balance": "tpex_margin",
     "announcement/notice": "twse_notice", "announcement/punish": "twse_punish",
-    "bulletin/attention": "tpex_attention", "bulletin/disposal": "tpex_disposal",
+    "bulletin/attention": "tpex_attention", "bulletin/disposal": "tpex_disposal", "indexInfo/inx": "tpex_inx",
 }
 
 

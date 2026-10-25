@@ -187,6 +187,47 @@ def ensure_history(latest, need, cal, comp, exs):
     return have
 
 
+def enrich_market(hist, exs, problems):
+    """大盤統計補兩樣：櫃買指數（月表，一次補一個月；精簡版的舊日子原本沒有）、
+    外資臺股期貨未平倉（期交所，一次查一個月以內的區間）。有補到就存回 data/daily。"""
+    changed = set()
+    need = [d for d in hist if "櫃買指數" not in (exs[d].get("indices") or {})]
+    for y, m in sorted({(d.year, d.month) for d in need}):
+        try:
+            month = S.tpex_index_month(dt.date(y, m, 1))
+        except FetchError as e:
+            print(f"  櫃買指數 {y}/{m} 下載失敗，下次再補：{e}")
+            continue
+        except DataError as e:
+            problems.append(str(e))
+            continue
+        for d in need:
+            if (d.year, d.month) == (y, m) and d.isoformat() in month:
+                exs[d].setdefault("indices", {})["櫃買指數"] = month[d.isoformat()]
+                changed.add(d)
+    need = sorted(d for d in hist if "futForeign" not in (exs[d].get("market") or {}))
+    while need:
+        a = need[0]
+        chunk = [d for d in need if (d - a).days < 30]
+        need = need[len(chunk):]
+        try:
+            got = S.taifex_foreign_oi(chunk[0], chunk[-1])
+        except FetchError as e:
+            print("  期交所外資期貨下載失敗，下次再補：", e)
+            break
+        except DataError as e:
+            problems.append(str(e))
+            break
+        for d in chunk:
+            if d.isoformat() in got:
+                exs[d].setdefault("market", {})["futForeign"] = got[d.isoformat()]
+                changed.add(d)
+    for d in changed:
+        store.save_daily(d, exs[d])
+    if changed:
+        print(f"大盤統計：補了 {len(changed)} 天的櫃買指數或外資期貨")
+
+
 def same(a, b):
     strip = lambda x: {k: v for k, v in (x or {}).items() if k != "generatedAt"}
     return json.dumps(strip(a), sort_keys=True) == json.dumps(strip(b), sort_keys=True)
@@ -245,6 +286,11 @@ def main():
         print("集保開放資料下載失敗，下次再抓：", e)
     except Exception as e:  # 不是連線問題（例如程式或格式錯誤）：名單照常更新，但讓這次執行顯示失敗
         problems.append(f"集保開放資料處理失敗：{e!r}")
+
+    try:  # 只用在大盤體溫的顯示，任何錯誤都不擋住名單
+        enrich_market(hist, exs, problems)
+    except Exception as e:
+        problems.append(f"櫃買指數／外資期貨：{e!r}")
 
     provider = BigProvider(cfg["tdcc_query_budget_seconds"])
     history = model.History(hist, exs)

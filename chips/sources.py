@@ -3,8 +3,10 @@
 全部回傳 Python dict，股數一律是「股」，融資融券餘額是「張」。資料尚未公布或當天休市時回傳 None。
 欄位盡量用欄位名稱對應（網站改版調整欄位順序時比較不會錯），找不到名稱才用已知的欄位位置。
 """
+import csv
 import datetime as dt
 import http.cookiejar
+import io
 import re
 import urllib.request
 
@@ -269,21 +271,30 @@ def tpex_quotes(d):
     return out
 
 
+def tpex_index_month(d):
+    """櫃買指數月表（d 所在月份的每個交易日）：{日期: {close, chg, chgPct}}。一次就能補一整個月。"""
+    j = get_json(f"{TPEX}/indexInfo/inx?date={d:%Y/%m/%d}&response=json")
+    tabs = (j or {}).get("tables") or []
+    if not tabs or not tabs[0].get("data"):
+        return {}
+    _expect(tabs[0].get("fields"), {0: "日期", 4: "收市", 5: "漲/跌"}, "櫃買指數月表")
+    out = {}
+    for r in tabs[0]["data"]:
+        m = re.fullmatch(r"(\d{3,4})/(\d{1,2})/(\d{1,2})", str(r[0]).strip())
+        close, chg = num(r[4]), num(r[5])
+        if not m or not close:
+            continue
+        y = int(m.group(1))
+        day = dt.date(y + 1911 if y < 1911 else y, int(m.group(2)), int(m.group(3)))
+        chg = chg or 0
+        out[day.isoformat()] = {"close": close, "chg": round(chg, 2),
+                                "chgPct": round(chg / (close - chg) * 100, 2) if close != chg else 0}
+    return out
+
+
 def tpex_index(d):
     """櫃買指數收盤：{close, chg, chgPct}。"""
-    j = _get(f"{TPEX}/indexInfo/inx?date={d:%Y/%m/%d}&response=json")
-    if not j:
-        return None
-    keys = {f"{d:%Y/%m/%d}", _roc(d), f"{d:%Y%m%d}"}
-    for t in j.get("tables") or []:
-        for r in t.get("data") or []:
-            if str(r[0]).strip() in keys and len(r) > 5:
-                close, chg = num(r[4]), num(r[5])
-                if close:
-                    chg = chg or 0
-                    return {"close": close, "chg": round(chg, 2),
-                            "chgPct": round(chg / (close - chg) * 100, 2) if close != chg else 0}
-    return None
+    return tpex_index_month(d).get(d.isoformat())
 
 
 def tpex_margin(d):
@@ -496,6 +507,49 @@ def tpex_punish(start, end):
     f, rows = _alert_rows(j, what)
     return _punish(rows, f, what, {"code": ["證券代號"], "ann": ["公布日期"], "period": ["處置起訖時間", "處置起迄時間"],
                                    "step": ["處置措施"], "detail": ["處置內容"]})
+
+
+# ---------------- 期交所 ----------------
+
+TAIFEX_FUT = "https://www.taifex.com.tw/cht/3/futContractsDateDown"
+
+
+def parse_taifex_fut(text):
+    """期交所「三大法人－區分各期貨契約」CSV → 外資在臺股期貨（大台）的未平倉：{日期: {net, long, short}}，單位口。"""
+    rows = [r for r in csv.reader(io.StringIO(text.strip())) if r]
+    if not rows:
+        return {}
+    head = [h.strip() for h in rows[0]]
+    need = {"date": "日期", "item": "商品名稱", "who": "身份別", "long": "多方未平倉口數", "short": "空方未平倉口數",
+            "net": "多空未平倉口數淨額"}
+    idx = {}
+    for k, name in need.items():
+        if name not in head:
+            raise DataError(f"期交所三大法人期貨找不到「{name}」欄位，網站可能改版")
+        idx[k] = head.index(name)
+    out = {}
+    for r in rows[1:]:
+        if len(r) < len(head):
+            continue
+        if r[idx["item"]].strip() != "臺股期貨" or not r[idx["who"]].strip().startswith("外資"):
+            continue
+        m = re.fullmatch(r"(\d{4})/(\d{1,2})/(\d{1,2})", r[idx["date"]].strip())
+        if not m:
+            raise DataError(f"期交所三大法人期貨的日期看不懂：{r[idx['date']]}")
+        day = dt.date(*(int(x) for x in m.groups())).isoformat()
+        out[day] = {k: int(z(r[idx[k]])) for k in ("net", "long", "short")}
+    return out
+
+
+def taifex_foreign_oi(start, end):
+    """外資臺股期貨未平倉（日期區間，一次最多查一個月）。"""
+    raw = fetch(TAIFEX_FUT, data={"queryStartDate": f"{start:%Y/%m/%d}", "queryEndDate": f"{end:%Y/%m/%d}", "commodityId": "TXF"})
+    text = decode(raw)
+    if "<html" in text[:300].lower():
+        if "查無資料" in text or "無資料" in text:
+            return {}
+        raise DataError("期交所三大法人期貨回傳的不是 CSV，網站可能改版")
+    return parse_taifex_fut(text)
 
 
 # ---------------- 集保結算所 ----------------

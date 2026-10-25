@@ -189,9 +189,9 @@ section.block{padding:56px 0 6px}
 .reads li::before{content:"";position:absolute;left:2px;top:.62em;width:6px;height:6px;border-radius:50%;background:var(--accent)}
 .reads .adv{font-size:13.5px;color:var(--ink-3)}
 @media (min-width:900px){
-  .temp-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .temp-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
   .tcard{border-bottom:1px solid var(--line-soft);border-right:1px solid var(--line-soft)}
-  .tcard:nth-child(4n){border-right:0}
+  .tcard:nth-child(3n){border-right:0}
 }
 
 /* ---------- 籌碼 ---------- */
@@ -473,9 +473,15 @@ footer a{color:var(--ink-2)}
 
 <main>
   <div class="wrap">
+    <section class="block" id="picks" aria-labelledby="picks-h">
+      <h2 id="picks-h">今日名單</h2>
+      <p class="lead">上市、上櫃分開計分，各取分數最高的 20 檔。一顆籌碼代表 5 分，顏色告訴你分數從哪裡來；虛線框的標籤（籌碼偏重、注意股、處置中）是提醒，不扣分。點一下股票可以看明細。</p>
+      <div id="picks-body"></div>
+    </section>
+
     <section class="block" id="temp" aria-labelledby="temp-h">
       <h2 id="temp-h">大盤體溫</h2>
-      <p class="lead">先看整個市場的狀態，再看個股。量能、融資、外資與站上季線的比例，都是收盤後的實際數字。</p>
+      <p class="lead">名單挑的是個股，這裡看整個市場的狀態：量能、融資、外資、站上季線的比例、櫃買和大盤誰比較強、外資台指期的部位，都是收盤後的實際數字。</p>
       <div id="temp-body"></div>
     </section>
 
@@ -483,12 +489,6 @@ footer a{color:var(--ink-2)}
       <h2 id="world-h">國際盤勢</h2>
       <p class="lead">台股很跟著美國走，特別是半導體。這裡是美國股市、利率、美元和原物料最近一個交易日的收盤，每天早上 8 點多更新。只用來看大環境，不放進名單分數。</p>
       <div id="world-body"></div>
-    </section>
-
-    <section class="block" id="picks" aria-labelledby="picks-h">
-      <h2 id="picks-h">今日名單</h2>
-      <p class="lead">上市、上櫃分開計分，各取分數最高的 20 檔。一顆籌碼代表 5 分，顏色告訴你分數從哪裡來；虛線框的標籤（籌碼偏重、注意股、處置中）是提醒，不扣分。點一下股票可以看明細。</p>
-      <div id="picks-body"></div>
     </section>
 
     <section class="block" id="history" aria-labelledby="history-h">
@@ -741,6 +741,12 @@ footer a{color:var(--ink-2)}
     }
     return el;
   }
+  function otcLine(series) {
+    var v = series.filter(function (x) { return x != null; });
+    if (v.length < 2) return line([], 0, 1);
+    var lo = Math.min.apply(null, v.concat([100])), hi = Math.max.apply(null, v.concat([100])), pad = (hi - lo) * 0.1 || 1;
+    return line(series, lo - pad, hi + pad, 100);
+  }
   function axis(T) {
     if (!T.dates || !T.dates.length) return null;
     return h("div", { class: "axis" }, h("span", null, md(T.dates[0])), h("span", null, md(T.dates[T.dates.length - 1])));
@@ -749,7 +755,7 @@ footer a{color:var(--ink-2)}
     var body = document.getElementById("temp-body"), T = L.temp;
     if (!T) { body.appendChild(h("p", { class: "empty-state panel" }, "大盤體溫的資料還在累積中，下次更新後就會出現。")); return; }
     var v = T.value || {}, mg = T.margin || {}, fo = T.foreign || {}, tr = T.trust || {}, br = T.breadth || {};
-    var b1 = br["上市"] || {}, b2 = br["上櫃"] || {};
+    var b1 = br["上市"] || {}, b2 = br["上櫃"] || {}, ot = T.otc || {}, fu = T.futures || {};
     var r100 = v.ratio ? (v.ratio - 1) * 100 : null;
     var ratioTxt = v.ratio ? "20 日均量 " + fmt(v.avg20) + " 億，" + (Math.abs(r100) < 3 ? "差不多" : (r100 < 0 ? "少 " : "多 ") + fmt(Math.abs(r100), 0) + "%") : "20 日均量還在累積";
     var cards = [
@@ -761,7 +767,13 @@ footer a{color:var(--ink-2)}
         bars(fo.series || [], { diverge: true })],
       ["站上季線的股票", b1.pct != null ? [fmt(b1.pct, 0), "%"] : ["—", ""], null,
         (b1.prev5 != null ? "上市，5 日前 " + fmt(b1.prev5, 0) + "%；" : "上市；") + "上櫃 " + (b2.pct != null ? fmt(b2.pct, 0) + "%" : "—"),
-        line(b1.series || [], 0, 100, 50)]
+        line(b1.series || [], 0, 100, 50)],
+      ["櫃買對大盤（近 20 日）", ot.rel20 != null ? [signed(ot.rel20, 1), " 個百分點"] : ["—", ""], ot.rel20 == null ? null : dir(ot.rel20),
+        ot.today != null ? "今天櫃買 " + pct(ot.today) + "、加權 " + pct(ot.taiex) + (ot.rel20 != null ? "；負的代表中小型股比較弱" : "") : "櫃買指數還在累積",
+        otcLine(ot.series || [])],
+      ["外資台指期淨未平倉", fu.net != null ? [signed(fu.net), " 口"] : ["—", ""], fu.net == null ? null : dir(fu.net),
+        fu.net == null ? "期交所資料還沒公布" : (fu.net < 0 ? "淨空單" : "淨多單") + (fu.chg ? "，比前一天" + ((fu.net < 0 ? fu.chg < 0 : fu.chg > 0) ? "增加 " : "減少 ") + fmt(Math.abs(fu.chg)) + " 口" : ""),
+        bars(fu.series || [], { diverge: true })]
     ];
     var grid = h("div", { class: "temp-grid" }, cards.map(function (c) {
       return h("div", { class: "tcard" }, h("h3", null, c[0]),
@@ -793,7 +805,8 @@ footer a{color:var(--ink-2)}
     fomc_sep: "公布利率決策和經濟預測（點陣圖），半小時後主席記者會。",
     cpi: "美國通膨數字，影響市場對 Fed 降息的預期。",
     nfp: "美國就業數字，影響市場對 Fed 降息的預期。",
-    cbc: "台灣央行決定利率和房市信用管制。"
+    cbc: "台灣央行決定利率和房市信用管制。",
+    election: "美國時間投票，開票結果大約台北時間隔天白天陸續出來；會影響關稅、資料中心等政策走向。"
   };
   function clock(iso) {
     var hh = +iso.slice(11, 13), mm = iso.slice(14, 16);

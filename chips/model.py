@@ -387,6 +387,23 @@ def market_temp(d0, exs, history):
         adv[mk] = {"up": up, "down": dn, "flat": flat}
 
     taiex = (exs[d0].get("indices") or {}).get("加權指數") or {}
+
+    def ix(d, name):
+        return ((H.market[d].get("indices") or {}).get(name) or {}).get("close")
+
+    tw, ot = [ix(d, "加權指數") for d in days[:21]], [ix(d, "櫃買指數") for d in days[:21]]
+    ratio = [b / a if a and b else None for a, b in zip(tw[:20], ot[:20])]
+    base = next((x for x in reversed(ratio) if x), None)
+    otc_now = (exs[d0].get("indices") or {}).get("櫃買指數") or {}
+    otc = {"today": otc_now.get("chgPct"), "taiex": taiex.get("chgPct"),
+           "series": [round(x / base * 100, 2) if x and base else None for x in reversed(ratio)], "rel20": None}
+    if len(tw) > 20 and tw[0] and ot[0] and tw[20] and ot[20]:
+        otc["otc20"] = round((ot[0] / ot[20] - 1) * 100, 2)
+        otc["taiex20"] = round((tw[0] / tw[20] - 1) * 100, 2)
+        otc["rel20"] = round(otc["otc20"] - otc["taiex20"], 2)
+    fut = [(m(d, "futForeign") or {}).get("net") for d in days[:20]]
+    futures = {"net": fut[0] if fut else None, "series": list(reversed(fut)),
+               "chg": fut[0] - fut[1] if len(fut) > 1 and fut[0] is not None and fut[1] is not None else None}
     out = {
         "dates": [d.isoformat() for d in reversed(days[:20])],
         "value": {"today": yi(today_v, nd=0), "avg20": yi(avg20, nd=0), "ratio": ratio,
@@ -398,6 +415,8 @@ def market_temp(d0, exs, history):
         "breadth": breadth,
         "adv": adv,
         "taiexChg": taiex.get("chgPct"),
+        "otc": otc,
+        "futures": futures,
     }
     out["read"] = temp_read(out)
     return out
@@ -437,7 +456,27 @@ def temp_read(t):
         elif b["pct"] > 70:
             s += "，多數股票在季線上"
         read.append(s + "。")
+    o = t.get("otc") or {}
+    if o.get("today") is not None and o.get("taiex") is not None:
+        s = f"櫃買指數 {_sp(o['today'])}%、加權指數 {_sp(o['taiex'])}%"
+        r = o.get("rel20")
+        if r is not None:
+            s += f"；近 20 個交易日櫃買比加權{'強' if r > 0 else '弱'} {abs(r):.1f} 個百分點"
+            s += "，資金偏向權值股" if r <= -3 else "，中小型股比較強" if r >= 3 else ""
+        read.append(s + "。")
+    f = t.get("futures") or {}
+    if f.get("net") is not None:
+        n, c = f["net"], f.get("chg")
+        s = f"外資台指期{'淨空單' if n < 0 else '淨多單'} {abs(n):,} 口"
+        if c:
+            more = (c < 0) if n < 0 else (c > 0)  # 空單：淨額變小是空單增加
+            s += f"，比前一天{'增加' if more else '減少'} {abs(c):,} 口"
+        read.append(s + "。")
     return read
+
+
+def _sp(v):
+    return ("+" if v > 0 else "−" if v < 0 else "") + f"{abs(v):.2f}"
 
 
 def compute_day(days, exs, cfg, companies, big_provider, history, revenue=None, alerts=None):
