@@ -1,0 +1,21 @@
+{
+ "VIXCLS": "TimeoutError('The read operation timed out')",
+ "NASDAQCOM": "TimeoutError('The read operation timed out')",
+ "SP500": "TimeoutError('The read operation timed out')",
+ "DGS10": "TimeoutError('The read operation timed out')",
+ "DGS2": "TimeoutError('The read operation timed out')",
+ "DTWEXBGS": "TimeoutError('The read operation timed out')",
+ "DEXTAUS": "TimeoutError('The read operation timed out')",
+ "BAMLH0A0HYM2": "TimeoutError('The read operation timed out')",
+ "DCOILWTICO": "TimeoutError('The read operation timed out')",
+ "^SOX": "ok 706 rows",
+ "TSM": "ok 706 rows",
+ "2330.TW": "ok 680 rows",
+ "^TWII": "ok 680 rows",
+ "^IXIC": "ok 706 rows",
+ "stooq_sox": "ok 796B head=b'<!DOCTYPE html><html><head><meta charset=\"utf-8\"><meta name='",
+ "nasdaq_sox": "ok 1387B head=b'{\"data\":{\"symbol\":\"SOX\",\"totalRecords\":38,\"tradesTable\":{\"as'",
+ "fed_fomc": "ok 165751B head=b'\\xef\\xbb\\xbf<!doctype html>\\r\\n<html lang=\"en\" class=\"no-js\">\\r\\n    <hea'",
+ "bls_cpi": "<HTTPError 403: 'Forbidden'>",
+ "cbc_fx": "ok 45054B head=b'<!DOCTYPE html><html lang=\"zh-Hant-TW\" class=\"no-js\">\\r\\n  <he'"
+}
