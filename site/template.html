@@ -273,6 +273,72 @@ section.block{padding:56px 0 6px}
   .detail{margin:0 18px 18px 62px;padding:18px;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:start}
 }
 
+/* ---------- 國際盤勢 ---------- */
+.mwhen{display:flex;flex-wrap:wrap;gap:2px 16px;padding:14px 18px 2px;font-size:13px;color:var(--ink-3)}
+.mwhen b{color:var(--ink-2);font-weight:600}
+.macro-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.mcard{padding:14px 16px 12px;min-width:0;border-bottom:1px solid var(--line-soft)}
+.mcard:nth-child(odd){border-right:1px solid var(--line-soft)}
+.mcard h3{margin:0;font-size:13px;font-weight:500;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mcard .v{font-family:var(--num);font-size:clamp(21px,4vw,25px);font-weight:600;line-height:1.25;margin-top:2px;white-space:nowrap}
+.mcard .v small{font-size:.58em;font-weight:500;color:var(--ink-3);margin-left:2px}
+.mcard .c{font-family:var(--num);font-size:14px;font-weight:600;white-space:nowrap}
+.mcard .c.flat{color:var(--ink-2)}
+.mcard .s{font-size:12.5px;color:var(--ink-2);margin-top:3px;line-height:1.45;min-height:2.9em}
+.mcard svg{display:block;width:100%;height:34px;margin-top:6px;overflow:visible}
+.mcard.stale .v{color:var(--ink-3)}
+@media (min-width:900px){
+  .macro-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .mcard,.mcard:nth-child(odd){border-right:1px solid var(--line-soft)}
+  .mcard:nth-child(5n){border-right:0}
+}
+.macro-cols{display:grid;gap:14px;margin-top:14px;align-items:start}
+@media (min-width:900px){.macro-cols{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}}
+.mpanel{padding:16px 18px 8px}
+.mpanel h3{margin:0 0 6px;font-size:15px}
+.events{list-style:none;margin:0;padding:0}
+.events li{display:grid;grid-template-columns:7.2em minmax(0,1fr);gap:2px 12px;padding:11px 0;border-top:1px solid var(--line-soft)}
+.events li:first-child{border-top:0}
+.events time{font-family:var(--num);font-weight:600;font-size:15.5px;line-height:1.3}
+.events time small{display:block;font-family:var(--zh);font-weight:400;color:var(--ink-3);font-size:12.5px}
+.events b{font-weight:600;font-size:15px}
+.events p{margin:2px 0 0;font-size:13px;color:var(--ink-3)}
+.events .soon time{color:var(--accent)}
+.howto summary{cursor:pointer;font-weight:600;font-size:15px;display:flex;justify-content:space-between;align-items:center;padding-bottom:8px;list-style:none}
+.howto summary::-webkit-details-marker{display:none}
+.howto[open] .chev{transform:rotate(180deg)}
+.howto ul{margin:0 0 10px;padding:0;list-style:none;display:grid;gap:7px;font-size:13.5px;color:var(--ink-2)}
+.howto li b{color:var(--ink);font-weight:600;margin-right:6px}
+.mnote{margin:0;padding:0 18px 14px;font-size:13px;color:var(--ink-3)}
+
+/* ---------- 名單的產業分布 ---------- */
+.secmix{margin:-2px 0 14px;max-width:52em}
+.secbar{display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--line-soft)}
+.secbar i{display:block;height:100%;background:var(--c)}
+.secbar i+i{box-shadow:inset 2px 0 0 var(--page)}
+.seclab{display:flex;flex-wrap:wrap;gap:3px 14px;margin-top:6px;font-size:13px;color:var(--ink-2)}
+.seclab span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;background:var(--c)}
+.secwarn{margin:8px 0 0;font-size:13.5px;color:var(--ink-2)}
+
+/* ---------- 實盤成績 ---------- */
+.track{margin-bottom:14px}
+.track-head{padding:18px 18px 4px}
+.track-head h3{margin:0;font-size:17px}
+.track-head p{margin:4px 0 0;font-size:14px;color:var(--ink-2);max-width:48em}
+.track-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.track-grid>div{padding:12px 18px 14px;min-width:0;font-size:14px;color:var(--ink-2)}
+.track-grid>div+div{border-left:1px solid var(--line-soft)}
+.track-grid .num{display:block;font-size:clamp(26px,5vw,34px);font-weight:600;line-height:1.15;margin:2px 0}
+.track-grid .vs{font-size:12.5px;color:var(--ink-3)}
+.track-chart{padding:0 18px 12px}
+.track-chart small{display:block;font-size:12.5px;color:var(--ink-3);margin-bottom:4px}
+.track-chart svg{display:block;width:100%;height:46px}
+.track-models{padding:0 18px 14px;overflow-x:auto}
+.track-models table{width:100%;border-collapse:collapse;font-size:13.5px}
+.track-models th{font-weight:500;color:var(--ink-3);text-align:right;padding:4px 0 4px 10px;white-space:nowrap}
+.track-models td{text-align:right;padding:5px 0 5px 10px;border-top:1px solid var(--line-soft);font-family:var(--num);white-space:nowrap}
+.track-models th:first-child,.track-models td:first-child{text-align:left;padding-left:0}
+
 /* ---------- 後續表現 ---------- */
 .perf-top{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-bottom:1px solid var(--line-soft)}
 .perf-top div{padding:18px;font-size:14px;color:var(--ink-2);min-width:0}
@@ -370,6 +436,7 @@ footer a{color:var(--ink-2)}
       <nav class="nav" aria-label="頁面區塊">
         <a href="#picks">今日名單</a>
         <a href="#temp">大盤體溫</a>
+        <a href="#world">國際盤勢</a>
         <a href="#history">後續表現</a>
         <a href="#rank">盤後排行</a>
         <a href="#method">分數怎麼算</a>
@@ -412,6 +479,12 @@ footer a{color:var(--ink-2)}
       <div id="temp-body"></div>
     </section>
 
+    <section class="block" id="world" aria-labelledby="world-h">
+      <h2 id="world-h">國際盤勢</h2>
+      <p class="lead">台股很跟著美國走，特別是半導體。這裡是美國股市、利率、美元和原物料最近一個交易日的收盤，每天早上 8 點多更新。只用來看大環境，不放進名單分數。</p>
+      <div id="world-body"></div>
+    </section>
+
     <section class="block" id="picks" aria-labelledby="picks-h">
       <h2 id="picks-h">今日名單</h2>
       <p class="lead">上市、上櫃分開計分，各取分數最高的 20 檔。一顆籌碼代表 5 分，顏色告訴你分數從哪裡來；虛線框的標籤（籌碼偏重、注意股、處置中）是提醒，不扣分。點一下股票可以看明細。</p>
@@ -441,7 +514,7 @@ footer a{color:var(--ink-2)}
       <div class="panel disclaimer" style="margin-top:18px">
         <p>本站是個人製作的資料整理網站，不是證券投資顧問事業，也不收取任何費用或報酬。</p>
         <p>名單由程式依公開資料和固定規則自動算出，只供研究與學習參考，不是買賣任何股票的建議或邀約，也不保證任何報酬。過去的表現不代表未來。</p>
-        <p>資料取自臺灣證券交易所、證券櫃檯買賣中心、臺灣集中保管結算所的公開資訊，可能有延遲、遺漏或事後更正，一切以各機構公告為準。</p>
+        <p>資料取自臺灣證券交易所、證券櫃檯買賣中心、臺灣集中保管結算所、公開資訊觀測站的公開資訊；國際行情取自 Yahoo Finance，事件日期取自美國聯準會、美國勞工統計局與中央銀行。資料可能有延遲、遺漏或事後更正，一切以各機構公告為準。</p>
         <p>投資一定有風險，融資、當沖等信用交易風險更高，可能損失超過本金。請依自己的財務狀況判斷，盈虧自負。</p>
       </div>
     </section>
@@ -703,6 +776,98 @@ footer a{color:var(--ink-2)}
     body.appendChild(h("p", { class: "fine" }, "季線是 60 日平均收盤價。以上是對當天數字的描述，不是對後市的判斷。"));
   }
 
+  // ---------- 國際盤勢 ----------
+  var MACRO_KEYS = ["sox", "ixic", "spx", "tsm", "vix", "tnx", "dxy", "twd", "wti", "gold"];
+  var MACRO_HOW = [
+    ["費城半導體", "美國半導體股的指數。台股權重最大的半導體族群跟它連動最緊。"],
+    ["那斯達克、S&P 500", "美國科技股和整體大盤的方向，AI 與電子供應鏈的風向球。"],
+    ["台積電 ADR 溢價", "台積電在美國掛牌的股價，換算成台股後比台股貴多少。溢價突然放大或縮小，常是外資看法在變。"],
+    ["VIX 恐慌指數", "用美股選擇權價格算出的預期波動。20 以下算平靜，30 以上是恐慌。"],
+    ["美國 10 年期公債殖利率", "長期利率。上升時，本益比高的科技股評價壓力比較大。"],
+    ["美元指數", "美元對歐元、日圓等主要貨幣的強弱。美元強的時候，資金常流回美國。"],
+    ["新台幣匯率", "1 美元換多少新台幣，數字變大就是新台幣貶值。外資大買台股時，新台幣常跟著升值。"],
+    ["原油、黃金", "原油是通膨和中東局勢的溫度計；黃金常在避險需求升高時上漲。"]
+  ];
+  var EV_NOTE = {
+    fomc: "公布利率決策，半小時後主席記者會。",
+    fomc_sep: "公布利率決策和經濟預測（點陣圖），半小時後主席記者會。",
+    cpi: "美國通膨數字，影響市場對 Fed 降息的預期。",
+    nfp: "美國就業數字，影響市場對 Fed 降息的預期。",
+    cbc: "台灣央行決定利率和房市信用管制。"
+  };
+  function clock(iso) {
+    var hh = +iso.slice(11, 13), mm = iso.slice(14, 16);
+    var p = hh < 6 ? "凌晨 " : hh < 12 ? "早上 " : hh === 12 ? "中午 " : hh < 18 ? "下午 " : "晚上 ";
+    return p + (hh > 12 ? hh - 12 : hh) + ":" + mm;
+  }
+  function mline(series) {
+    var v = series.filter(function (x) { return x != null; });
+    if (v.length < 2) return null;
+    var lo = Math.min.apply(null, v), hi = Math.max.apply(null, v), pad = (hi - lo) * 0.08 || 1;
+    return line(series, lo - pad, hi + pad);
+  }
+  function mtile(key, M) {
+    var T = M.tiles || {}, t = T[key];
+    var name, val, unit = "", chg = null, cls = "flat", sub, series;
+    if (key === "tsm") {
+      var a = M.adr || [];
+      if (!a.length) return null;
+      var last = a[a.length - 1][1], av = mean(a.map(function (x) { return x[1]; }));
+      name = "台積電 ADR 溢價"; val = fmt(last, 1); unit = "%";
+      if (t) { chg = "ADR " + arrow(t.chg1) + fmt(Math.abs(t.chg1), 2) + "%"; cls = dir(t.chg1); }
+      sub = (t ? "ADR " + fmt(t.last, 2) + " 美元；" : "") + "近 " + a.length + " 日平均溢價 " + fmt(av, 1) + "%";
+      series = a.map(function (x) { return x[1]; });
+    } else {
+      if (!t) return null;
+      name = t.name;
+      var nd = { sox: 0, ixic: 0, spx: 0, gold: 0 }[key];
+      val = fmt(t.last, nd == null ? 2 : nd);
+      unit = key === "tnx" ? "%" : key === "wti" || key === "gold" ? "美元" : "";
+      if (key === "tnx" || key === "vix") { chg = t.d1 == null ? null : arrow(t.d1) + fmt(Math.abs(t.d1), 2); cls = dir(t.d1); }
+      else if (key === "twd") { chg = t.chg1 == null ? null : (t.chg1 > 0 ? "新台幣貶 " : "新台幣升 ") + fmt(Math.abs(t.chg1), 2) + "%"; }
+      else { chg = t.chg1 == null ? null : arrow(t.chg1) + fmt(Math.abs(t.chg1), 2) + "%"; cls = dir(t.chg1); }
+      if (key === "sox" || key === "ixic" || key === "spx")
+        sub = "近 20 日 " + pct(t.chg20, 1) + (t.ma50 == null ? "" : "｜" + (t.ma50 >= 0 ? "50 日線上 " : "50 日線下 ") + fmt(Math.abs(t.ma50), 1) + "%");
+      else if (key === "vix") sub = "近 20 日平均 " + fmt(t.avg20, 1);
+      else if (key === "tnx") sub = t.d20 == null ? "" : "近 20 日" + (t.d20 >= 0 ? "上升 " : "下降 ") + fmt(Math.abs(t.d20), 2) + " 個百分點";
+      else if (key === "twd") sub = "1 美元兌新台幣" + (t.chg20 == null ? "" : "；近 20 日" + (t.chg20 > 0 ? "貶 " : "升 ") + fmt(Math.abs(t.chg20), 1) + "%");
+      else if (key === "dxy") sub = "近 20 日 " + pct(t.chg20, 1);
+      else sub = "近 5 日 " + pct(t.chg5, 1) + "｜近 20 日 " + pct(t.chg20, 1);
+      if (t.stale) sub = "資料停在 " + md(t.date) + "；" + sub;
+      series = t.spark || [];
+    }
+    return h("div", { class: "mcard" + (t && t.stale ? " stale" : "") }, h("h3", null, name),
+      h("div", { class: "v" }, val, unit ? h("small", null, unit) : null),
+      chg ? h("div", { class: "c " + cls }, chg) : null,
+      h("div", { class: "s" }, sub), mline(series));
+  }
+  function renderMacro() {
+    var body = document.getElementById("world-body"), M = D.macro;
+    var tiles = M ? MACRO_KEYS.map(function (k) { return mtile(k, M); }).filter(Boolean) : [];
+    if (!tiles.length) { body.appendChild(h("p", { class: "empty-state panel" }, "國際行情這次沒有抓到，下次更新會再試。")); return; }
+    var T = M.tiles || {}, d = (T.sox || T.spx || {}).date;
+    var when = h("div", { class: "mwhen" }, d ? h("span", null, "美國 ", h("b", null, md(d) + " " + wd(d)), " 收盤") : null,
+      M.asOf ? h("span", null, "台北時間 " + md(M.asOf.slice(0, 10)) + " " + M.asOf.slice(11, 16) + " 更新") : null);
+    var panel = h("div", { class: "panel" }, when, h("div", { class: "macro-grid" }, tiles),
+      (M.read || []).length ? h("ul", { class: "reads" }, M.read.map(function (x) { return h("li", null, x); })) : null,
+      M.missing && M.missing.length ? h("p", { class: "mnote" }, "這次沒抓到：" + M.missing.join("、") + "（有上次的數字就照舊顯示，並註明日期）。") : null);
+    body.appendChild(panel);
+    var now = Date.now(), evs = M.events || [];
+    var ev = h("div", { class: "panel mpanel" }, h("h3", null, "接下來的大事（台北時間）"),
+      evs.length ? h("ul", { class: "events" }, evs.map(function (e) {
+        var dd = e.at.slice(0, 10), soon = new Date(e.at).getTime() - now < 3 * 864e5;
+        return h("li", { class: soon ? "soon" : null }, h("time", { datetime: e.at }, md(dd) + " " + wd(dd), e.hasTime ? h("small", null, clock(e.at)) : null),
+          h("div", null, h("b", null, e.name), h("p", null, EV_NOTE[e.kind] || "")));
+      })) : h("p", { class: "fine" }, "接下來 40 天沒有登記的重要事件。"));
+    var how = h("details", { class: "panel mpanel howto" }, h("summary", null, "這些數字怎麼看", chev()),
+      h("ul", null, MACRO_HOW.map(function (x) { return h("li", null, h("b", null, x[0]), x[1]); })));
+    if (window.matchMedia && window.matchMedia("(min-width: 900px)").matches) how.open = true;
+    body.appendChild(h("div", { class: "macro-cols" }, ev, how));
+    body.appendChild(h("p", { class: "fine" }, "國際行情來自 Yahoo Finance（非官方介面，偶爾會延遲或抓不到），事件日期來自美國聯準會、美國勞工統計局與中央銀行。" +
+      "回測裡，美股前一晚的漲跌在台股隔天的開盤價就反映了（費半當晚漲跌和台股隔天開盤跳空的相關係數 0.63，和開盤後到收盤只有 −0.14），" +
+      "而名單是隔天開盤買，所以這一區只描述大環境，不放進分數，也不是對後市的判斷。"));
+  }
+
   // ---------- 今日名單 ----------
   var state = { market: store("market") || "上市", sort: "score", animated: false };
 
@@ -740,8 +905,9 @@ footer a{color:var(--ink-2)}
     if (rg) body.appendChild(rg);
     body.appendChild(h("div", { class: "summary" },
       h("span", null, "平均 ", num(fmt(avg, 1)), " 分"),
-      h("span", null, "收漲 ", num(String(up), "up"), " 檔、收跌 ", num(String(dn), "down"), " 檔"),
-      topSec ? h("span", null, "產業最多：" + topSec) : null));
+      h("span", null, "收漲 ", num(String(up), "up"), " 檔、收跌 ", num(String(dn), "down"), " 檔")));
+    var mix = secMix(list, sec);
+    if (mix) body.appendChild(mix);
     body.appendChild(h("div", { class: "legend", "aria-hidden": "true" },
       FK.map(function (k) { return h("span", null, h("i", { class: "chip f-" + k }), FN[k]); }),
       list.some(function (p) { return p.penalty; }) ? h("span", null, h("i", { class: "chip pen" }), "籌碼偏重扣分") : null));
@@ -754,6 +920,25 @@ footer a{color:var(--ink-2)}
     state.animated = true;
     panel.appendChild(ol);
     body.appendChild(panel);
+  }
+
+  // 名單集中在哪些產業。回測裡限制同產業檔數反而變差，所以只提醒、不限制
+  function secMix(list, sec) {
+    if (list.length < 5) return null;
+    var keys = Object.keys(sec).sort(function (a, b) { return sec[b] - sec[a] || (a < b ? -1 : 1); });
+    var shown = keys.slice(0, 4).filter(function (k) { return sec[k] >= 2; });
+    var other = list.length - shown.reduce(function (s, k) { return s + sec[k]; }, 0);
+    var shades = [90, 62, 40, 24];
+    var parts = shown.map(function (k, i) { return [k, sec[k], "color-mix(in srgb,var(--accent) " + shades[i] + "%,transparent)"]; });
+    if (other > 0) parts.push(["其他", other, "color-mix(in srgb,var(--ink-3) 30%,transparent)"]);
+    var bar = h("div", { class: "secbar", role: "img", "aria-label": "產業分布：" + parts.map(function (x) { return x[0] + " " + x[1] + " 檔"; }).join("、") });
+    parts.forEach(function (x) { var i = h("i"); i.style.width = (x[1] / list.length * 100) + "%"; i.style.setProperty("--c", x[2]); bar.appendChild(i); });
+    var lab = h("div", { class: "seclab", "aria-hidden": "true" }, parts.map(function (x) {
+      var s = h("span", null, x[0] + " " + x[1]); s.style.setProperty("--c", x[2]); return s; }));
+    var top = keys[0], share = sec[top] / list.length;
+    var warn = share >= 0.3 ? h("p", { class: "secwarn" }, "有 " + sec[top] + " 檔是" + top + "（" + fmt(share * 100, 0) + "%），漲跌容易一起動，等於押在這個族群。" +
+      "回測裡限制同產業最多 3 檔，20 日報酬反而少很多，所以不限制，只提醒。") : null;
+    return h("div", { class: "secmix" }, bar, lab, warn);
   }
 
   // 依當天站上季線的比例，提醒回測裡這種盤名單的表現（描述過去，不是預測）
@@ -831,8 +1016,43 @@ footer a{color:var(--ink-2)}
   // ---------- 後續表現 ----------
   function cell(label, text, v) { return h("span", { class: "cell" }, h("small", null, label), num(text, v == null ? "" : dir(v))); }
 
+  function trackPanel() {
+    var R = D.track || {}, B = D.backtest, bt = (B && B.overall) || {};
+    var head = h("div", { class: "track-head" }, h("h3", null, "實盤成績"),
+      h("p", null, R.lists ? "從 " + md(R.since) + " 開始，記下每天公布、下一個交易日開盤前就固定的名單（之後模型改版也不會改），目前 " + R.lists + " 份。這是確認網站準不準最直接的方式。"
+        : "從下一份名單開始，記下每天公布、下一個交易日開盤前就固定的名單（之後模型改版也不會改），再追蹤它們的表現。這是確認網站準不準最直接的方式。"));
+    var panel = h("div", { class: "panel track" }, head);
+    var series = R.series || [];
+    var e5 = series.filter(function (x) { return x.ex5 != null; }), e20 = series.filter(function (x) { return x.ex20 != null; });
+    if (!e5.length) {
+      if (R.lists) panel.appendChild(h("p", { class: "mnote" }, "名單滿 5 個交易日後，這裡開始顯示成績。"));
+      return panel;
+    }
+    function block(k, rows) {
+      var label = k + " 日平均超額", ref = MK.map(function (mk) { return bt[mk] ? mk + " " + pct(bt[mk]["d" + k]) : null; }).filter(Boolean).join("、");
+      if (!rows.length) return h("div", null, label, h("span", { class: "num" }, "累積中"), h("span", { class: "vs" }, "名單滿 " + k + " 個交易日後開始計算。回測：" + ref + "。"));
+      var m = mean(rows.map(function (x) { return x["ex" + k]; })), mk = R.market || {};
+      var per = MK.map(function (x) { var v = (mk[x] || {})["ex" + k]; return v == null ? null : x + " " + pct(v); }).filter(Boolean).join("、");
+      var win = rows.filter(function (x) { return x["ex" + k] > 0; }).length;
+      return h("div", null, label + "（" + rows.length + " 份）", num(pct(m), dir(m)),
+        h("span", { class: "vs" }, per + "；贏過同市場的 " + win + " 份。回測：" + ref + "。"));
+    }
+    panel.appendChild(h("div", { class: "track-grid" }, block(5, e5), block(20, e20)));
+    if (e5.length >= 3) panel.appendChild(h("div", { class: "track-chart" }, h("small", null, "每份名單的 5 日超額（左舊右新）"), bars(e5.map(function (x) { return x.ex5; }), { diverge: true })));
+    var models = R.models || [];
+    if (models.length > 1) panel.appendChild(h("div", { class: "track-models" }, h("table", null,
+      h("thead", null, h("tr", null, h("th", null, "模型版本"), h("th", null, "期間"), h("th", null, "名單"), h("th", null, "5 日超額"), h("th", null, "20 日超額"))),
+      h("tbody", null, models.map(function (x) {
+        return h("tr", null, h("td", null, "第 " + x.model + " 版"), h("td", null, md(x.from) + "～" + md(x.to)), h("td", null, String(x.lists)),
+          h("td", { class: dir(x.ex5) }, pct(x.ex5)), h("td", { class: dir(x.ex20) }, pct(x.ex20)));
+      })))));
+    panel.appendChild(h("p", { class: "mnote" }, "超額＝名單平均報酬減掉同市場合格股票的平均，隔天開盤買進起算，沒有扣交易成本（一買一賣約 0.4%）。份數少的時候數字跳動很大，至少累積 3 個月再下結論。"));
+    return panel;
+  }
+
   function renderHistory() {
     var body = document.getElementById("history-body");
+    body.appendChild(trackPanel());
     var hist = (D.history || []).filter(function (x) { return x.days > 0; });
     var B = D.backtest;
     if (!hist.length) { body.appendChild(h("p", { class: "empty-state panel" }, "名單公布後的下一個交易日收盤，這裡就會開始顯示表現。")); return; }
@@ -1008,6 +1228,7 @@ footer a{color:var(--ink-2)}
   if (SITE.title) { document.title = SITE.title; document.getElementById("site-title").textContent = SITE.title; }
   renderHeroData();
   renderTemp();
+  renderMacro();
   renderPicks();
   renderHistory();
   renderRank();

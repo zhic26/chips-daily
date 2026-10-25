@@ -12,7 +12,8 @@ import json
 import sys
 
 from chips import alerts as A
-from chips import model, site, store
+from chips import macro as M
+from chips import model, site, store, track
 from chips import sources as S
 from chips.checks import DataError, check_picks
 from chips.bigholders import BigProvider
@@ -276,6 +277,19 @@ def main():
     provider.flush()
     if provider.queried:
         print(f"集保逐檔查詢 {provider.queried} 次")
+
+    latest = store.picks_dates()[:1]
+    if latest and track.record(store.load_picks(latest[0]), now):
+        print(f"實盤紀錄：存下 {latest[0]} 的名單（下一個平日開盤後固定）")
+
+    try:  # 國際盤勢只是顯示用，任何錯誤都不擋住名單
+        tw_close = {d.isoformat(): exs[d]["q"]["2330"][model.Q_CLOSE] for d in hist
+                    if (exs[d]["q"].get("2330") or [None] * 3)[model.Q_CLOSE]}
+        mac, bad = M.update(now, tw_close)
+        problems += bad
+        print("國際盤勢：", "；".join(mac["read"][:2]) or "沒有資料", ("（沒抓到：" + "、".join(mac["missing"]) + "）") if mac["missing"] else "")
+    except Exception as e:
+        problems.append(f"國際盤勢：{e!r}")
 
     site.build(cfg, now)
     store.prune_daily(cfg["keep_daily_days"])
