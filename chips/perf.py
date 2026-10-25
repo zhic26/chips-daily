@@ -47,3 +47,27 @@ def universe(d, stored, exf, cfg):
         if vols and sum(vols) / len(vols) >= cfg["min_avg_lots"]:
             out[q[Q_MKT]].append(code)
     return out
+
+
+def hold_open(code, after, exf, k):
+    """隔天開盤買進、第 k+1 個交易日（after[k]）開盤賣出的報酬（%）。賣出那天的跳空用參考價算（已扣除權息）；
+    證交所除權息日沒有參考價，就用前一天收盤（會把配息當成下跌，少見）。"""
+    q1 = exf(after[0])["q"].get(code)
+    if not q1 or not q1[Q_OPEN] or q1[Q_CLOSE] is None:
+        return None
+    v = q1[Q_CLOSE] / q1[Q_OPEN]
+    prev = q1[Q_CLOSE]
+    for d in after[1:k]:
+        q = exf(d)["q"].get(code)
+        r = day_ret(q)
+        if r is not None:
+            v *= 1 + r
+        if q and q[Q_CLOSE] is not None:
+            prev = q[Q_CLOSE]
+    qx = exf(after[k])["q"].get(code)
+    if not qx or not qx[Q_OPEN]:
+        return None
+    ref = prev if qx[Q_EXR] or qx[Q_DIFF] is None or qx[Q_CLOSE] is None else qx[Q_CLOSE] - qx[Q_DIFF]
+    if not ref:
+        return None
+    return round((v * qx[Q_OPEN] / ref - 1) * 100, 2)

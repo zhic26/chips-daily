@@ -33,6 +33,7 @@ DEFAULTS = {
     "tdcc_candidates": 40,
     "tdcc_query_budget_seconds": 600,
     "backfill_days": 5,
+    "exit": {"rank": 80, "max_days": 60},  # 參考出場：分數掉到同市場第 rank 名以後隔天開盤賣，最多抱 max_days 個交易日
     "history_days": 30,  # 後續表現列出最近幾份名單（要滿 20 個交易日才有 20 日報酬）
     "market_history_days": 80,   # 算季線（60 日均線）和近 20 日趨勢需要的交易日數
     "keep_daily_days": 85,

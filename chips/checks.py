@@ -102,4 +102,8 @@ def check_picks(doc, cfg):
         need(all(a >= b for a, b in zip(scores, scores[1:])), f"{d} {mk}分數沒有由高到低排")
         need(all(p.get("name") and _finite(p.get("close")) and p["close"] > 0 for p in grp), f"{d} {mk}名單缺少股名或收盤價")
         need(all(_finite(v) for p in grp for v in p["parts"].values()), f"{d} {mk}分項分數有空值")
+        rk = (doc.get("ranking") or {}).get(mk)
+        if rk is not None:
+            need(len(rk) == len(set(rk)), f"{d} {mk}全市場排名有重複的股票")
+            need(len(rk) >= min(len(grp), 1), f"{d} {mk}全市場排名是空的")
     return True

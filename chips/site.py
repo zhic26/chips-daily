@@ -2,7 +2,7 @@
 import json
 import os
 
-from . import store, track
+from . import exits, store, track
 from .model import BENCH, Q_OPEN
 from .perf import avg as _avg, hold as _hold, universe as _universe
 
@@ -55,6 +55,34 @@ def history(cfg):
     return out
 
 
+def exit_status(cfg):
+    """之前名單的股票照參考出場規則的狀態（還在抱的、明天該賣的、最近賣掉的）。"""
+    stored = sorted(store.daily_dates())
+    if not stored:
+        return {}, []
+    maxd = (cfg.get("exit") or {}).get("max_days", 60)
+    since = stored[-min(len(stored), maxd + 5)]
+    dates = [d for d in store.picks_dates() if d >= since]
+    cache = {}
+
+    def exf(d):
+        if d not in cache:
+            cache[d] = store.load_daily(d)
+        return cache[d]
+
+    st = exits.evaluate(cfg, dates, stored, exf)
+    recent = set(x.isoformat() for x in stored[-10:])
+    items = []
+    for d in dates:
+        doc = store.load_picks(d)
+        for p in (doc or {}).get("picks", []):
+            s = st.get((d.isoformat(), p["code"]))
+            if not s or s["state"] == "noentry" or (s["state"] == "sold" and s.get("exit") not in recent):
+                continue
+            items.append(dict(s, date=d.isoformat(), code=p["code"], name=p["name"], market=p["market"]))
+    return st, items
+
+
 def build(cfg, now):
     dates = store.picks_dates()
     if not dates:
@@ -72,6 +100,13 @@ def build(cfg, now):
         "macro": store.load_meta("macro"),
         "track": track.summary(track.results(cfg), cfg),
     }
+    st, items = exit_status(cfg)
+    data["exits"] = {"rule": cfg.get("exit"), "items": items}
+    for x in data["history"]:
+        for r in x["picks"]:
+            s = st.get((x["date"], r["code"]))
+            if s:
+                r["exit"] = s
     with open(TEMPLATE, encoding="utf-8") as f:
         html = f.read()
     payload = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")

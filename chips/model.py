@@ -1,7 +1,8 @@
 """籌碼評分、大盤體溫與各種排行。輸入是 data/daily 的每日盤後資料，輸出是一天的結果。"""
 from .sources import INDUSTRY
 
-MODEL_VERSION = 5  # 計分方式改版時加一，舊的名單會在下次執行時用新方式重算
+MODEL_VERSION = 6  # 計分方式改版時加一，舊的名單會在下次執行時用新方式重算
+RANK_KEEP = 100  # 每天存下各市場分數前幾名（出場規則看「是否掉到第 N 名以後」）
 LOT = 1000
 MARKETS = ("上市", "上櫃")
 INDEX_ORDER = ["加權指數", "櫃買指數", "半導體", "電子", "金融", "航運", "生技"]
@@ -492,7 +493,7 @@ def compute_day(days, exs, cfg, companies, big_provider, history, revenue=None, 
             x["alert"] = alert[x["code"]]
     lookup = big_provider.lookup_for(d0)
     picks = []
-    universe, eff = {}, {}
+    universe, eff, ranking = {}, {}, {}
     for mk in MARKETS:
         grp = [x for x in rows if x["market"] == mk]
         universe[mk] = len(grp)
@@ -500,6 +501,8 @@ def compute_day(days, exs, cfg, companies, big_provider, history, revenue=None, 
         w = weights_for(cfg, margin_ok)
         eff[mk] = {k: round(v, 1) for k, v in w.items()}
         top = score_market(grp, w, lookup, cfg)
+        # 出場規則用的全市場排名：所有合格股票照分數排（千張大戶一項當中間值，跟回測一樣），只存前 RANK_KEEP 名
+        ranking[mk] = [x["code"] for x in sorted(grp, key=lambda x: (-x.get("_pre", 0), -x["instNet"]))[:RANK_KEEP]]
         for i, x in enumerate(top, 1):
             x["rank"] = i
             x["tags"] = tags_for(x)
@@ -527,4 +530,5 @@ def compute_day(days, exs, cfg, companies, big_provider, history, revenue=None, 
         "temp": market_temp(d0, exs, history),
         "picks": picks,
         "rank": rankings(days, exs, cfg, companies, {p["code"] for p in picks}),
+        "ranking": ranking,
     }
