@@ -768,13 +768,13 @@ footer a{color:var(--ink-2)}
       b = Math.round(b);  // 顯示的數字和分區用同一個值，避免出現「35%（低於 35%）」
       var i = b < cut[0] ? 0 : b <= cut[1] ? 1 : 2;
       var range = i === 0 ? "低於 " + cut[0] + "%" : i === 1 ? cut[0] + "%～" + cut[1] + "%" : "高於 " + cut[1] + "%";
-      return h("li", null, h("span", { class: "z z" + i }, ["名單較弱的盤", "普通", "名單較有效的盤"][i]),
+      return h("li", null, h("span", { class: "z z" + i }, ["名單相對較弱", "普通", "名單相對較強"][i]),
         h("b", null, m + "站上季線的股票 " + fmt(b, 0) + "%"), "（" + range + "）。回測裡這種盤，" + m + "名單 5 個交易日後平均比同市場股票" +
         rel(bb.d5[i]) + "，20 個交易日後" + rel(bb.d20[i]) + "。");
     }).filter(Boolean);
     if (!lines.length) return null;
     return h("div", { class: "regime" }, h("h3", null, "盤勢提醒"), h("ul", null, lines),
-      h("p", null, "依 " + B.period + " 回測：" + B.note + "。描述過去的統計，不代表之後一定如此。"));
+      h("p", null, "這是名單跟同市場股票比的相對差距，不是買點訊號：站上季線比例高的時候，整個大盤之後反而常常回檔。依 " + B.period + " 回測：" + B.note + "。"));
   }
 
   function pickRow(p, animateRow, pos) {
