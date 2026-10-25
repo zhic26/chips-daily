@@ -14,6 +14,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 os.chdir(ROOT)
 from chips.net import FetchError, decode, fetch  # noqa: E402
+from chips import net  # noqa: E402
+
+net.MIN_GAP["www.tdcc.com.tw"] = 1.0  # 回測大量查詢：放慢一點，避免造成集保網站負擔
 
 URL = "https://www.tdcc.com.tw/portal/zh/smWeb/qryStock"
 
