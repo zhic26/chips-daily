@@ -91,6 +91,15 @@ def save_tdcc_query(week, data):
 
 # ---- 選股結果 ----
 
+def save_tdcc_full(week, full):
+    """每週的股東人數與各級距持股（開放資料），已存過就不覆蓋。回傳是否新存。"""
+    path = os.path.join(DATA, "tdcc_full", f"{week}.json")
+    if os.path.exists(path):
+        return False
+    _write(path, full)
+    return True
+
+
 def revenue_months():
     """已存的月營收月份（YYYY-MM），舊到新。"""
     d = os.path.join(DATA, "revenue")

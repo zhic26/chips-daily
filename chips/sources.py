@@ -339,19 +339,29 @@ def mops_revenue(y, m):
 # ---------------- 集保結算所 ----------------
 
 def tdcc_latest():
-    """集保戶股權分散表開放資料（只有最新一週）：(資料日 YYYYMMDD, {代號: 千張大戶持股 %})。"""
+    """集保戶股權分散表開放資料（只有最新一週）：(資料日 YYYYMMDD, {代號: 千張大戶持股 %},
+    {代號: [股東人數, 千張以上 %, 400 張以上 %, 50 張以下 %]})。第三項每週存下來，累積夠了再回測股東人數的效果。"""
     text = get_text("https://opendata.tdcc.com.tw/getOD.ashx?id=1-5")
-    big, date = {}, None
+    big, acc, date = {}, {}, None
     for line in text.splitlines()[1:]:
         p = [x.strip() for x in line.split(",")]
-        if len(p) < 6:
+        if len(p) < 6 or not is_common_stock(p[1]) or not p[2].isdigit():
             continue
         date = date or p[0]
-        if p[2] == "15" and is_common_stock(p[1]):  # 第 15 級：1,000,001 股以上（千張大戶）
-            v = num(p[5])
-            if v is not None:
-                big[p[1]] = v
-    return date, big
+        lvl, holders, pct = int(p[2]), num(p[3]), num(p[5])
+        a = acc.setdefault(p[1], {"h": None, "p15": None, "p400": 0.0, "p50": 0.0})
+        if pct is None:
+            continue
+        if lvl == 15:  # 第 15 級：1,000,001 股以上（千張大戶）
+            big[p[1]] = a["p15"] = pct
+        if 12 <= lvl <= 15:  # 400 張以上
+            a["p400"] += pct
+        if 1 <= lvl <= 8:  # 50 張以下
+            a["p50"] += pct
+        if pct >= 99.9 and lvl >= 16:  # 合計列
+            a["h"] = holders
+    full = {c: [a["h"], a["p15"], round(a["p400"], 2), round(a["p50"], 2)] for c, a in acc.items()}
+    return date, big, full
 
 
 class TdccQuery:

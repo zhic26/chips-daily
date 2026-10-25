@@ -214,7 +214,9 @@ def main():
     full = [d for d in hist if not exs[d].get("light")]  # 有完整資料的日子（算連買天數用）
 
     try:
-        week, big = S.tdcc_latest()
+        week, big, tdcc_full = S.tdcc_latest()
+        if week and tdcc_full and store.save_tdcc_full(week, tdcc_full):
+            print(f"集保：存入 {week} 股東人數與級距（{len(tdcc_full)} 檔）")
         if week and store.save_tdcc(week, big):
             print(f"集保：新增 {week} 週資料（{len(big)} 檔）")
     except Exception as e:
