@@ -505,7 +505,7 @@ footer a{color:var(--ink-2)}
 
     <section class="block" id="world" aria-labelledby="world-h">
       <h2 id="world-h">國際盤勢</h2>
-      <p class="lead">台股很跟著美國走，特別是半導體。這裡是美國股市、利率、美元和原物料最近一個交易日的收盤，每天早上 8 點多更新。只用來看大環境，不放進名單分數。</p>
+      <p class="lead">台股很跟著美國走，特別是半導體。這裡是美國股市、利率、美元和原物料最近一個交易日的收盤，每天早上開盤前更新。只用來看大環境，不放進名單分數。</p>
       <div id="world-body"></div>
     </section>
 
@@ -906,7 +906,7 @@ footer a{color:var(--ink-2)}
     var body = document.getElementById("picks-body");
     body.textContent = "";
     var all = L.picks || [];
-    if (!all.length) { body.appendChild(h("p", { class: "empty-state panel" }, "今天還沒有名單。盤後資料通常在晚上 10 點半左右更新完成。")); return; }
+    if (!all.length) { body.appendChild(h("p", { class: "empty-state panel" }, "今天還沒有名單。盤後資料通常在晚上 10 點到 11 點之間更新完成。")); return; }
     var notes = [];
     if (L.marginPending && L.marginPending.length) notes.push(L.marginPending.join("、") + "的融資資料還沒公布，這一項暫時不計分，其他項目依比例放大回滿分。");
     if (L.tdcc && L.tdcc.mode === "none") notes.push("這次沒有取得集保大戶資料，千張大戶一項以中間值計分。");
@@ -1287,7 +1287,7 @@ footer a{color:var(--ink-2)}
         "%，固定抱 20 天是 " + fmt(D.exits.rule.backtest.hold20.per20, 1) + "%；最差的 5% 交易約 " + fmt(D.exits.rule.backtest.rule.worst5, 0) + "%，固定抱 20 天約 " +
         fmt(D.exits.rule.backtest.hold20.worst5, 0) + "%。代價是勝率比較低（" + D.exits.rule.backtest.rule.win + "%），而且換股比較頻繁。這兩年大多是多頭，空頭時的表現還沒驗證過。") : null,
       h("h3", null, "什麼時候更新"),
-      h("p", null, "每個交易日晚上 10 點半左右自動更新（融資融券約 9 點半才公布），隔天早上再檢查一次有沒有補上的資料。集保千張大戶一週更新一次" +
+      h("p", null, "每個交易日晚上 9 點 40 分到 11 點多之間會自動更新好幾次（融資融券約 9 點半才公布；網站的排程常晚一點，所以多排幾次），隔天早上開盤前再檢查幾次有沒有補上的資料。集保千張大戶一週更新一次" +
         (t.week ? "，這次用 " + md(t.week) + " 那一週和 " + (t.prevWeek ? md(t.prevWeek) : "前一週") + " 比較。" : "。")),
       h("h3", null, "資料來源"),
       h("ul", null,
