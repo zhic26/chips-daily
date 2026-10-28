@@ -292,10 +292,10 @@ section.block{padding:56px 0 6px}
 }
 
 /* ---------- 我的持股 ---------- */
-.mine{margin:0 0 18px;padding:16px 16px 14px}
+.mine{padding:16px 16px 14px}
 .mine-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 28px}
-.mine-head h3{margin:0;font-family:var(--display);font-size:19px;font-weight:700}
-.mine-head p{margin:3px 0 0;font-size:13.5px;color:var(--ink-3);max-width:38em}
+.mine-head>p{margin:0;font-size:15px;color:var(--ink-2);max-width:36em}
+.mine-cap{margin:0 0 4px;font-size:13px;color:var(--ink-3)}
 .mine.empty .mine-head{align-items:center}
 .mine-tot{display:flex;flex-wrap:wrap;gap:6px 28px}
 .mine-tot div{font-size:12.5px;color:var(--ink-3);min-width:0}
@@ -526,6 +526,7 @@ footer a{color:var(--ink-2)}
       </a>
       <nav class="nav" aria-label="頁面區塊">
         <a href="#picks">今日名單</a>
+        <a href="#holdings">我的持股</a>
         <a href="#temp">大盤體溫</a>
         <a href="#world">國際盤勢</a>
         <a href="#history">後續表現</a>
@@ -567,8 +568,13 @@ footer a{color:var(--ink-2)}
     <section class="block" id="picks" aria-labelledby="picks-h">
       <h2 id="picks-h">今日名單</h2>
       <p class="lead">上市、上櫃分開計分，各取分數最高的 20 檔。一顆籌碼代表 5 分，顏色告訴你分數從哪裡來；虛線框的標籤（籌碼偏重、注意股、處置中）是提醒，不扣分。點一下股票可以看明細。</p>
-      <div id="mine"></div>
       <div id="picks-body"></div>
+    </section>
+
+    <section class="block" id="holdings" aria-labelledby="holdings-h">
+      <h2 id="holdings-h">我的持股</h2>
+      <p class="lead">記下你買的股票或 ETF，網站每天收盤後幫你算損益，並照「參考進出」的規則提醒哪天該賣。持股只存在這台裝置的瀏覽器，不會上傳到任何地方。</p>
+      <div id="mine"></div>
     </section>
 
     <section class="block" id="temp" aria-labelledby="temp-h">
@@ -1093,9 +1099,11 @@ footer a{color:var(--ink-2)}
     var P = my.P, has = my.rows.length > 0;
     var card = h("div", { class: "mine panel" + (has ? "" : " empty"), "aria-label": "我的持股" });
     if (my.incoming) card.appendChild(incomingBox());
-    var sub = has ? "只存在這台裝置的瀏覽器，不會上傳。" + (P ? "以 " + mdw(P.date) + "收盤計算。" : my.failed ? "價格資料沒有載入，請重新整理。" : "價格載入中…")
-      : "記下你買的股票或 ETF，網站每天收盤後幫你算損益，並對照參考賣點。資料只存在這台裝置的瀏覽器，不會上傳。";
-    var head = h("div", { class: "mine-head" }, h("div", null, h("h3", null, "我的持股"), h("p", null, sub)));
+    var head = h("div", { class: "mine-head" }), sum = h("div", null);
+    if (has) sum.appendChild(h("p", { class: "mine-cap" }, P ? "以 " + mdw(P.date) + "收盤計算，共 " + my.rows.length + " 筆" :
+      my.failed ? "價格資料沒有載入，請重新整理網頁。" : "價格載入中…"));
+    else sum = h("p", null, "還沒有記任何持股。按「新增持股」開始，或把另一台裝置匯出的代碼「匯入」。");
+    head.appendChild(sum);
     var st = {};
     my.rows.forEach(function (r) { st[r.id] = myStatus(r); });
     if (has && P) {
@@ -1106,7 +1114,7 @@ footer a{color:var(--ink-2)}
         n++; cost += r.p * r.s; val += q[2] * r.s;
         if (r.d < P.date && !q[4]) today += (q[3] || 0) * r.s; else if (r.d === P.date) today += (q[2] - r.p) * r.s;
       });
-      if (n) head.appendChild(h("div", { class: "mine-tot" },
+      if (n) sum.appendChild(h("div", { class: "mine-tot" },
         h("div", null, "市值", h("b", null, fmt(val), h("small", null, "元"))),
         h("div", null, "帳面損益", h("b", { class: dir(val - cost) }, signed(val - cost), h("small", null, pct((val / cost - 1) * 100)))),
         h("div", null, md(P.date) + " 當天", h("b", { class: dir(today) }, signed(today)))));
@@ -1285,7 +1293,7 @@ footer a{color:var(--ink-2)}
     var m = /#import=(FH1\.[A-Za-z0-9_-]+)/.exec(location.hash || "");
     if (m) { try { my.incoming = myParse(m[1]); } catch (e) { my.incoming = null; } }
     renderMine();
-    if (my.incoming) { var el = document.getElementById("mine"); if (el) el.scrollIntoView(); }
+    if (my.incoming) { var el = document.getElementById("holdings"); if (el) el.scrollIntoView(); }
   }
 
   // ---------- 今日名單 ----------
