@@ -23,9 +23,18 @@ class Build(unittest.TestCase):
                 site.DOCS = real
             html = open(os.path.join(tmp, "index.html"), encoding="utf-8").read()
             latest = json.load(open(os.path.join(tmp, "latest.json"), encoding="utf-8"))
+            px = json.load(open(os.path.join(tmp, "prices.json"), encoding="utf-8"))
         self.assertNotIn("/*__DATA__*/null", html)
         self.assertNotIn("__TITLE__", html)
         self.assertTrue(latest["picks"])
+        # 「我的持股」用的價格檔：名單上的股票都要查得到收盤價，前 N 名和日期一一對應
+        self.assertEqual(px["date"], latest["date"])
+        for p in latest["picks"]:
+            self.assertEqual(px["p"][p["code"]][2], p["close"])
+        self.assertEqual(len(px["rank"]["dates"]), len(px["rank"]["top"]))
+        self.assertIn(latest["date"], px["rank"]["dates"])
+        lim = px["rule"]["rank"]
+        self.assertTrue(all(len(t.split()) <= lim for day in px["rank"]["top"] for t in day))
         if shutil.which("node"):
             for i, js in enumerate(re.findall(r"<script>(.*?)</script>", html, flags=re.S)):
                 with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as f:

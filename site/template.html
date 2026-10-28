@@ -291,6 +291,79 @@ section.block{padding:56px 0 6px}
   .detail{margin:0 18px 18px 62px;padding:18px;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:start}
 }
 
+/* ---------- 我的持股 ---------- */
+.mine{margin:0 0 18px;padding:16px 16px 14px}
+.mine-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 28px}
+.mine-head h3{margin:0;font-family:var(--display);font-size:19px;font-weight:700}
+.mine-head p{margin:3px 0 0;font-size:13.5px;color:var(--ink-3);max-width:38em}
+.mine.empty .mine-head{align-items:center}
+.mine-tot{display:flex;flex-wrap:wrap;gap:6px 28px}
+.mine-tot div{font-size:12.5px;color:var(--ink-3);min-width:0}
+.mine-tot b{display:block;font-family:var(--num);font-size:23px;font-weight:600;line-height:1.2;color:var(--ink);white-space:nowrap}
+.mine-tot b.up{color:var(--up)} .mine-tot b.down{color:var(--down)}
+.mine-tot b small{font-size:14.5px;font-weight:500;margin-left:6px}
+.mine-flash{margin:10px 0 0;font-size:13.5px;color:var(--ink-2)}
+.mine-alert{margin:14px 0 0;padding:10px 14px;border-radius:12px;font-size:14.5px;color:var(--ink);
+  background:color-mix(in srgb,var(--accent) 12%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 34%,transparent)}
+.mine-alert.soft{background:var(--sunk);border-color:var(--line)}
+.mine-alert b{font-weight:700}
+.mine-alert+.mine-alert{margin-top:8px}
+.mine-alert .mf-btns{margin-top:8px}
+.mine-list{list-style:none;margin:12px 0 0;padding:0;border-top:1px solid var(--line-soft)}
+.mrow{border-bottom:1px solid var(--line-soft)}
+.mrow-main{display:grid;width:100%;border:0;background:none;text-align:left;cursor:pointer;padding:12px 6px;gap:3px 14px;border-radius:10px;
+  grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"who pnl" "sub sub" "st st";align-items:baseline;transition:background .2s}
+.mrow-main:hover,.mrow.editing .mrow-main{background:color-mix(in srgb,var(--sunk) 65%,transparent)}
+.mrow-who{grid-area:who;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px;min-width:0}
+.mrow-who b{font-size:17px;font-weight:700;letter-spacing:.02em}
+.mrow-pnl{grid-area:pnl;text-align:right;font-family:var(--num);font-weight:600;font-size:19px;line-height:1.2;white-space:nowrap}
+.mrow-pnl small{display:block;font-size:13.5px;font-weight:500}
+.mrow-sub{grid-area:sub;font-size:13.5px;color:var(--ink-2)}
+.mrow-sub .num{font-size:14.5px;color:var(--ink)}
+.mrow-sub .num.up{color:var(--up)} .mrow-sub .num.down{color:var(--down)}
+.mrow-st{grid-area:st;font-size:13.5px;color:var(--ink-3)}
+.mrow-st::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ink-3);margin-right:7px;vertical-align:.1em}
+.mrow-st.keep{color:var(--ink-2)}
+.mrow-st.keep::before{background:var(--f-consistency)}
+.mrow-st.act{color:var(--accent);font-weight:600}
+.mrow-st.act::before{background:var(--accent)}
+.mrow-st.late{color:var(--ink)}
+.mrow-st.late::before{background:var(--f-big_holders)}
+.mine-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.mine.empty .mine-actions{margin-top:0}
+.mbtn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 16px;border-radius:11px;cursor:pointer;
+  border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:14.5px;font-weight:600;transition:border-color .2s,color .2s,filter .2s}
+.mbtn:hover{border-color:var(--accent);color:var(--accent)}
+.mbtn.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.mbtn.primary:hover{color:var(--surface);filter:brightness(1.1)}
+.mbtn.danger{color:var(--up)}
+.mbtn.danger:hover{border-color:var(--up);color:var(--up)}
+.mform,.mshare{display:grid;gap:12px;margin:6px 0 14px;padding:16px;border-radius:14px;background:var(--sunk)}
+.mshare{margin-top:14px}
+.mform h4,.mshare h4{margin:0;font-size:15.5px}
+.mshare p{margin:0;font-size:13.5px;color:var(--ink-2);max-width:46em}
+.mf-grid{display:grid;gap:12px 14px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.mf-field{min-width:0}
+.mf-field label{display:block;font-size:13px;color:var(--ink-3);margin-bottom:5px}
+.mf-field input,.mcode{width:100%;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.mf-field input{height:44px;padding:0 12px;font:16px var(--num);letter-spacing:.01em}
+.mf-field input::placeholder,.mcode::placeholder{color:var(--ink-3);font-family:var(--zh);font-size:14px}
+.mf-field input:focus,.mcode:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.mf-hint{margin:5px 0 0;font-size:12.5px;line-height:1.45;color:var(--ink-3)}
+.mf-check{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;cursor:pointer;max-width:46em}
+.mf-check input{flex:none;width:18px;height:18px;margin:3px 0 0;accent-color:var(--accent)}
+.mf-check small{display:block;font-size:12.5px;color:var(--ink-3)}
+.mf-err{margin:0;font-size:13.5px;color:var(--up)}
+.mf-err:empty{display:none}
+.mf-btns{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.mcode{min-height:76px;padding:10px 12px;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all;resize:vertical}
+.mine .fine{margin:12px 0 0}
+@media (min-width:900px){
+  .mine{padding:20px 22px 16px}
+  .mrow-main{grid-template-columns:minmax(0,1fr) minmax(0,2.3fr) 10.5em;grid-template-areas:"who sub pnl" "who st pnl";align-items:center;padding:12px 10px}
+  .mf-grid{grid-template-columns:1.25fr 1fr 1fr 1fr}
+}
+
 /* ---------- 國際盤勢 ---------- */
 .mwhen{display:flex;flex-wrap:wrap;gap:2px 16px;padding:14px 18px 2px;font-size:13px;color:var(--ink-3)}
 .mwhen b{color:var(--ink-2);font-weight:600}
@@ -494,6 +567,7 @@ footer a{color:var(--ink-2)}
     <section class="block" id="picks" aria-labelledby="picks-h">
       <h2 id="picks-h">今日名單</h2>
       <p class="lead">上市、上櫃分開計分，各取分數最高的 20 檔。一顆籌碼代表 5 分，顏色告訴你分數從哪裡來；虛線框的標籤（籌碼偏重、注意股、處置中）是提醒，不扣分。點一下股票可以看明細。</p>
+      <div id="mine"></div>
       <div id="picks-body"></div>
     </section>
 
@@ -897,6 +971,321 @@ footer a{color:var(--ink-2)}
     body.appendChild(h("p", { class: "fine" }, "國際行情來自 Yahoo Finance（非官方介面，偶爾會延遲或抓不到），事件日期來自美國聯準會、美國勞工統計局與中央銀行。" +
       "回測裡，美股前一晚的漲跌在台股隔天的開盤價就反映了（費半當晚漲跌和台股隔天開盤跳空的相關係數 0.63，和開盤後到收盤只有 −0.14），" +
       "而名單是隔天開盤買，所以這一區只描述大環境，不放進分數，也不是對後市的判斷。"));
+  }
+
+  // ---------- 我的持股 ----------
+  // 持股只存在這台裝置的瀏覽器（localStorage），網頁只會去讀公開的 prices.json，不會把持股傳到任何地方。
+  var my = { rows: [], P: null, loading: false, failed: false, mode: null, edit: null, del: null, incoming: null, saved: true, msg: "", shut: null };
+  function isEtf(c) { return /^00\d{2,4}[A-Z]?$/.test(c); }
+  function todayTPE() { return new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10); }
+  function addDay(iso, n) { var t = day(iso); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); }
+  function mdw(iso) { return md(iso) + "（" + wd(iso) + "）"; }
+  function exitRule() { var R = (D.exits || {}).rule || {}; return { lim: R.rank || 80, maxd: R.max_days || 60 }; }
+  function okRow(r) {
+    return !!r && /^[0-9A-Z]{4,6}$/.test(r.c) && /^\d{4}-\d{2}-\d{2}$/.test(r.d) && r.p > 0 && r.s > 0 && isFinite(r.p) && isFinite(r.s);
+  }
+  function myLoad() {
+    try {
+      var j = JSON.parse(store("holdings") || "null");
+      return (j && Array.isArray(j.rows) ? j.rows : []).filter(okRow);
+    } catch (e) { return []; }
+  }
+  function mySave() {
+    try { localStorage.setItem("chips.holdings", JSON.stringify({ v: 1, rows: my.rows })); my.saved = true; } catch (e) { my.saved = false; }
+  }
+  // 匯出代碼：FH1. 加上持股陣列的 base64（只有代號、日期和數字，都是英數字）
+  function myCode(rows) {
+    var s = btoa(JSON.stringify(rows.map(function (r) { return [r.c, r.d, r.p, r.s, r.r ? 1 : 0]; })));
+    return "FH1." + s.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function myParse(text) {
+    var m = /FH1\.([A-Za-z0-9_-]+)/.exec(String(text || ""));
+    if (!m) throw new Error("找不到持股代碼，代碼是 FH1. 開頭的一長串英數字。");
+    var arr, s = m[1].replace(/-/g, "+").replace(/_/g, "/");
+    while (s.length % 4) s += "=";
+    try { arr = JSON.parse(atob(s)); } catch (e) { arr = null; }
+    if (!Array.isArray(arr)) throw new Error("代碼不完整，請整串重新複製。");
+    var stamp = Date.now().toString(36);
+    var rows = arr.map(function (a, k) { return { id: "h" + stamp + k, c: String(a[0]).toUpperCase(), d: a[1], p: +a[2], s: +a[3], r: !!a[4] }; });
+    if (rows.some(function (r) { return !okRow(r); })) throw new Error("代碼裡有看不懂的持股資料，請整串重新複製。");
+    return rows;
+  }
+  function myPrices() {
+    if (my.P || my.loading || !window.fetch) return;
+    my.loading = true;
+    fetch("prices.json?v=" + encodeURIComponent(D.generatedAt || ""))
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (j) { my.P = j; my.shut = null; }, function () { my.failed = true; })
+      .then(function () { my.loading = false; renderMine(true); });
+  }
+  // 交易日：週一到週五，扣掉證交所公布的休市日和颱風假
+  function isTd(iso) {
+    if (!my.shut) { my.shut = {}; ((my.P && my.P.cal && my.P.cal.closed) || []).forEach(function (x) { my.shut[x] = 1; }); }
+    var w = day(iso).getUTCDay();
+    return w > 0 && w < 6 && !my.shut[iso];
+  }
+  function tdBetween(a, b) { var n = 0; for (var x = a, g = 0; x <= b && g < 4000; x = addDay(x, 1), g++) if (isTd(x)) n++; return n; }
+  function tdNth(a, n) { for (var x = a, k = 0, g = 0; g < 4000; x = addDay(x, 1), g++) if (isTd(x) && ++k === n) return x; return null; }
+  function tdNext(a) { return tdNth(addDay(a, 1), 1); }
+  function guessed(iso) { return ((my.P && my.P.cal && my.P.cal.known) || []).indexOf(iso.slice(0, 4)) < 0; }
+  function inLists(c, d) {
+    var lo = addDay(d, -14), hit = function (list) { return (list || []).some(function (p) { return p.code === c; }); };
+    if (L.date && L.date < d && L.date >= lo && hit(L.picks)) return true;
+    return (D.history || []).some(function (x) { return x.date < d && x.date >= lo && hit(x.picks); });
+  }
+  function myName(r) { var q = my.P && my.P.p[r.c]; return q ? q[0] : r.c; }
+
+  // 照網站的參考進出規則（和名單用的同一套）：買進當天起每天收盤看排名，掉到同市場第 N 名以後隔天開盤賣；
+  // 抱滿 M 個交易日那天收盤賣。回傳 { cls, text, act, at }，cls：keep 繼續抱／act 下個交易日要動作／late 之前就該賣了
+  function myStatus(r) {
+    var P = my.P;
+    if (!P) return null;
+    var q = P.p[r.c], X = exitRule(), last = P.date;
+    if (!q) return { cls: "late", text: isEtf(r.c) && !P.etf ? "ETF 的收盤價從下一次更新開始才有" : "找不到這檔 " + md(last) + " 的收盤價，代號可能打錯了" };
+    if (isEtf(r.c)) return { cls: "", text: "ETF 不套用參考賣點" };
+    if (!r.r) return { cls: "", text: "沒有套用參考賣點" };
+    var mk = MK[q[1]], RK = P.rank || { dates: [], top: [] };
+    if (r.d > last) return { cls: "keep", text: "收盤後開始對照參考賣點：分數掉到" + mk + "第 " + X.lim + " 名以後，隔天開盤賣" };
+    for (var i = 0; i < RK.dates.length; i++) {
+      var t = RK.dates[i];
+      if (t < r.d) continue;
+      if (tdBetween(r.d, t) >= X.maxd) break;
+      if ((" " + RK.top[i][q[1]] + " ").indexOf(" " + r.c + " ") < 0) {
+        var out = tdNext(t);
+        if (t !== last) return { cls: "late", text: "照規則 " + md(out) + " 開盤就該賣了：" + md(t) + " 收盤分數掉到" + mk + "第 " + X.lim + " 名以後" };
+        var now = ((D.exits || {}).rankNow || {})[r.c];
+        return { cls: "act", act: "開盤", at: out, text: "照規則 " + (guessed(out) ? "約 " : "") + mdw(out) + "開盤賣：" + md(t) + " 收盤分數掉到" + mk + (now ? "第 " + now + " 名" : " 100 名外") };
+      }
+    }
+    var held = tdBetween(r.d, last), end = tdNth(r.d, X.maxd);
+    if (held >= X.maxd) return { cls: "late", text: "照規則 " + md(end) + " 收盤就該賣了：抱滿 " + X.maxd + " 個交易日" };
+    if (end === tdNext(last)) return { cls: "act", act: "收盤", at: end, text: "照規則 " + mdw(end) + "收盤賣：抱滿 " + X.maxd + " 個交易日" };
+    var rk = ((D.exits || {}).rankNow || {})[r.c];
+    var since = RK.dates.length && r.d < RK.dates[0] ? "（排名只對照得到 " + md(RK.dates[0]) + " 以後）" : "";
+    return { cls: "keep", text: "照規則繼續抱：現在" + mk + (rk ? "第 " + rk + " 名" : "前 " + X.lim + " 名內") + "，已抱 " + held + " 個交易日，最晚 " +
+      (guessed(end) ? "約 " : "") + mdw(end) + "收盤賣" + since };
+  }
+
+  // 價格載入完要重畫時（keep），保留表單裡已經打的字和游標所在的欄位
+  var DRAFT_IDS = ["mf-code", "mf-date", "mf-price", "mf-shares"];
+  function renderMine(keep) {
+    var box = document.getElementById("mine"), d = null;
+    if (!box) return;
+    if (keep) {
+      var act = document.activeElement, rule = document.getElementById("mf-rule"), imp = box.querySelector(".mshare textarea:not([readonly])");
+      d = { v: {}, rule: rule ? rule.checked : null, imp: imp ? imp.value : null, focus: act && act.id && box.contains(act) ? act.id : null };
+      DRAFT_IDS.forEach(function (id) { var el = document.getElementById(id); if (el) d.v[id] = el.value; });
+    }
+    drawMine(box);
+    if (!d) return;
+    DRAFT_IDS.forEach(function (id) { var el = document.getElementById(id); if (el && d.v[id] != null) el.value = d.v[id]; });
+    var code = document.getElementById("mf-code"), r2 = document.getElementById("mf-rule"), imp2 = box.querySelector(".mshare textarea:not([readonly])");
+    if (code) code.dispatchEvent(new Event("input"));
+    if (r2 && d.rule != null && r2.checked !== d.rule) { r2.checked = d.rule; r2.dispatchEvent(new Event("change")); }
+    if (imp2 && d.imp != null) imp2.value = d.imp;
+    var f = d.focus && document.getElementById(d.focus);
+    if (f) f.focus();
+  }
+
+  function drawMine(box) {
+    box.textContent = "";
+    if ((my.rows.length || my.mode === "add" || my.edit) && !my.P && !my.failed) myPrices();
+    var P = my.P, has = my.rows.length > 0;
+    var card = h("div", { class: "mine panel" + (has ? "" : " empty"), "aria-label": "我的持股" });
+    if (my.incoming) card.appendChild(incomingBox());
+    var sub = has ? "只存在這台裝置的瀏覽器，不會上傳。" + (P ? "以 " + mdw(P.date) + "收盤計算。" : my.failed ? "價格資料沒有載入，請重新整理。" : "價格載入中…")
+      : "記下你買的股票或 ETF，網站每天收盤後幫你算損益，並對照參考賣點。資料只存在這台裝置的瀏覽器，不會上傳。";
+    var head = h("div", { class: "mine-head" }, h("div", null, h("h3", null, "我的持股"), h("p", null, sub)));
+    var st = {};
+    my.rows.forEach(function (r) { st[r.id] = myStatus(r); });
+    if (has && P) {
+      var cost = 0, val = 0, today = 0, n = 0;
+      my.rows.forEach(function (r) {
+        var q = P.p[r.c];
+        if (!q) return;
+        n++; cost += r.p * r.s; val += q[2] * r.s;
+        if (r.d < P.date && !q[4]) today += (q[3] || 0) * r.s; else if (r.d === P.date) today += (q[2] - r.p) * r.s;
+      });
+      if (n) head.appendChild(h("div", { class: "mine-tot" },
+        h("div", null, "市值", h("b", null, fmt(val), h("small", null, "元"))),
+        h("div", null, "帳面損益", h("b", { class: dir(val - cost) }, signed(val - cost), h("small", null, pct((val / cost - 1) * 100)))),
+        h("div", null, md(P.date) + " 當天", h("b", { class: dir(today) }, signed(today)))));
+    }
+    if (!has && !my.mode) head.appendChild(myActions());
+    card.appendChild(head);
+    if (my.msg) { card.appendChild(h("p", { class: "mine-flash", role: "status" }, my.msg)); my.msg = ""; }
+    if (!my.saved) card.appendChild(h("p", { class: "mine-alert soft" }, "這個瀏覽器不能儲存資料（可能是無痕視窗），關掉網頁後持股會不見。"));
+
+    var groups = {}, late = [];
+    my.rows.forEach(function (r) {
+      var s = st[r.id];
+      if (s && s.cls === "act") { var k = s.act + s.at; (groups[k] = groups[k] || { s: s, names: [] }).names.push(myName(r)); }
+      else if (s && s.cls === "late" && P.p[r.c]) late.push(myName(r));
+    });
+    Object.keys(groups).forEach(function (k) {
+      var g = groups[k];
+      card.appendChild(h("p", { class: "mine-alert" }, h("b", null, "照規則 " + (guessed(g.s.at) ? "約 " : "") + mdw(g.s.at) + g.s.act + "要賣："),
+        g.names.join("、") + "。依規則算出的參考，不是買賣建議。"));
+    });
+    if (late.length) card.appendChild(h("p", { class: "mine-alert soft" }, "有 " + late.length + " 檔照規則之前就該賣了：" + late.join("、") + "，原因寫在下面。"));
+
+    if (has) {
+      var rank = { act: 0, late: 1, keep: 2, "": 3 };
+      var rows = my.rows.slice().sort(function (a, b) {
+        var x = rank[(st[a.id] || {}).cls || ""], y = rank[(st[b.id] || {}).cls || ""];
+        return x - y || (a.d < b.d ? 1 : a.d > b.d ? -1 : 0);
+      });
+      card.appendChild(h("ul", { class: "mine-list" }, rows.map(function (r) { return myRow(r, st[r.id]); })));
+    }
+    if (my.mode === "add") card.appendChild(myForm(null));
+    if (my.mode === "export" || my.mode === "import") card.appendChild(myShare());
+    if (has && !my.mode) card.appendChild(myActions());  // 表單打開時，用表單自己的按鈕
+    if (has) card.appendChild(h("p", { class: "fine" }, "帳面損益用收盤價計算，沒有扣手續費和證交稅（賣出時股票約再扣 0.44%、ETF 約 0.24%）。「照規則」是依網站參考進出規則算出的結果，不是買賣建議。" +
+      "持股只存在這台裝置的瀏覽器；換電腦、換瀏覽器或清除瀏覽資料前，記得先「匯出」。"));
+    box.appendChild(card);
+  }
+
+  function myActions() {
+    function go(mode) { return function () { my.mode = my.mode === mode ? null : mode; my.edit = null; my.del = null; renderMine(); if (my.mode === "add") focusSoon("mf-code"); }; }
+    return h("div", { class: "mine-actions" },
+      h("button", { type: "button", class: "mbtn primary", "aria-pressed": String(my.mode === "add"), onclick: go("add") }, "新增持股"),
+      my.rows.length ? h("button", { type: "button", class: "mbtn", "aria-pressed": String(my.mode === "export"), onclick: go("export") }, "匯出") : null,
+      h("button", { type: "button", class: "mbtn", "aria-pressed": String(my.mode === "import"), onclick: go("import") }, "匯入"));
+  }
+  function focusSoon(id) { setTimeout(function () { var el = document.getElementById(id); if (el) el.focus(); }, 0); }
+
+  function myRow(r, s) {
+    var P = my.P, q = P && P.p[r.c], editing = my.edit === r.id;
+    var gain = q ? (q[2] - r.p) * r.s : null, g = q ? (q[2] / r.p - 1) * 100 : null;
+    var chg = q && q[3] != null && !q[4] && q[2] !== q[3] ? q[3] / (q[2] - q[3]) * 100 : null;
+    var btn = h("button", { type: "button", class: "mrow-main", "aria-expanded": String(editing), title: "點一下可以編輯或刪除",
+      onclick: function () { my.edit = editing ? null : r.id; my.mode = null; my.del = null; renderMine(); if (my.edit) focusSoon("mf-price"); } },
+      h("span", { class: "mrow-who" }, h("b", null, myName(r)), h("span", { class: "code" }, r.c),
+        q ? h("span", { class: "mk" }, isEtf(r.c) ? "ETF" : MK[q[1]]) : null),
+      h("span", { class: "mrow-sub" }, md(r.d) + " 買 ", num(price(r.p)), " 元，", num(fmt(r.s)), " 股",
+        q ? ["｜收盤 ", num(price(q[2])), q[4] ? "（" + md(q[4]) + " 之後沒有成交）" : chg == null ? "" : [" ", num(arrow(chg) + fmt(Math.abs(chg), 2) + "%", dir(chg))]] : null),
+      h("span", { class: "mrow-pnl" + (gain == null ? "" : " " + dir(gain)) }, gain == null ? "—" : signed(gain), g == null ? null : h("small", null, pct(g))),
+      s ? h("span", { class: "mrow-st " + s.cls }, s.text) : null);
+    var li = h("li", { class: "mrow" + (editing ? " editing" : ""), "data-id": r.id }, btn);
+    if (editing) li.appendChild(myForm(r));
+    return li;
+  }
+
+  function myForm(row) {
+    var P = my.P, today = todayTPE(), X = exitRule(), touched = false;
+    var code = h("input", { id: "mf-code", type: "text", inputmode: "text", autocomplete: "off", autocapitalize: "characters", spellcheck: "false", maxlength: "6",
+      placeholder: "例如 2330、0050", "aria-describedby": "mf-code-hint", value: row ? row.c : "" });
+    var date = h("input", { id: "mf-date", type: "date", max: today, value: row ? row.d : today });
+    var px = h("input", { id: "mf-price", type: "text", inputmode: "decimal", autocomplete: "off", placeholder: "成交價", value: row ? String(row.p) : "" });
+    var sh = h("input", { id: "mf-shares", type: "text", inputmode: "numeric", autocomplete: "off", placeholder: "1 張 = 1000 股", value: row ? String(row.s) : "" });
+    var rule = h("input", { id: "mf-rule", type: "checkbox" });
+    rule.checked = row ? !!row.r : false;
+    var hint = h("p", { class: "mf-hint", id: "mf-code-hint", "aria-live": "polite" });
+    var ruleHint = h("small", null);
+    var ruleBox = h("label", { class: "mf-check", for: "mf-rule" }, rule, h("span", null, "套用參考賣點", ruleHint));
+    var err = h("p", { class: "mf-err", role: "alert" });
+    function sync() {
+      var c = code.value.trim().toUpperCase(), q = P && P.p[c], etf = isEtf(c);
+      hint.textContent = !c ? "上市、上櫃的股票和 ETF 都可以" : !P ? (my.failed ? "價格資料沒有載入，還是可以先記下來" : "價格資料載入中…") :
+        q ? q[0] + "，" + (etf ? "ETF" : MK[q[1]]) + "，" + md(P.date) + " 收盤 " + price(q[2]) + " 元" :
+        etf && !P.etf ? "ETF 的收盤價從下一次更新開始才有，可以先記下來" : "找不到這個代號";
+      ruleBox.hidden = etf;
+      var listed = !!c && !etf && /^\d{4}-\d{2}-\d{2}$/.test(date.value) && inLists(c, date.value);
+      if (!row && !touched) rule.checked = listed;
+      ruleHint.textContent = (listed ? "這檔買進前兩週內在名單上。" : c ? "這檔買進前兩週內不在名單上，長期持有的可以不勾。" : "") +
+        "規則：分數掉到同市場第 " + X.lim + " 名以後隔天開盤賣，最多抱 " + X.maxd + " 個交易日。";
+    }
+    rule.addEventListener("change", function () { touched = true; });
+    code.addEventListener("input", sync);
+    date.addEventListener("change", sync);
+    sync();
+    function close() { my.mode = null; my.edit = null; my.del = null; renderMine(); }
+    function submit(e) {
+      e.preventDefault();
+      var c = code.value.trim().toUpperCase(), d = date.value;
+      var p = parseFloat(px.value.replace(/[,\s]/g, "")), s = parseFloat(sh.value.replace(/[,\s]/g, ""));
+      var msg = !/^[0-9A-Z]{4,6}$/.test(c) ? "股票代號是 4 到 6 碼，例如 2330、0050、00679B。" :
+        P && !P.p[c] && !(isEtf(c) && !P.etf) ? "找不到 " + c + "，請確認代號。" :
+        !/^\d{4}-\d{2}-\d{2}$/.test(d) || d > today ? "請選買進日期（不能晚於今天）。" :
+        !(p > 0) ? "請填買進價格。" : !(s > 0) || s % 1 ? "股數要是正整數，1 張是 1000 股。" : "";
+      if (msg) { err.textContent = msg; return; }
+      var rec = { id: row ? row.id : "h" + Date.now().toString(36), c: c, d: d, p: p, s: s, r: !isEtf(c) && rule.checked };
+      if (row) my.rows = my.rows.map(function (x) { return x.id === row.id ? rec : x; });
+      else my.rows.push(rec);
+      mySave();
+      my.msg = (row ? "已更新 " : "已加入 ") + myName(rec) + "。";
+      close();
+    }
+    function del() {
+      if (my.del !== row.id) { my.del = row.id; renderMine(); focusSoon("mf-del"); return; }
+      my.rows = my.rows.filter(function (x) { return x.id !== row.id; });
+      mySave();
+      my.msg = "已刪除 " + myName(row) + "。";
+      close();
+    }
+    return h("form", { class: "mform", novalidate: true, onsubmit: submit },
+      h("h4", null, row ? "編輯 " + myName(row) : "新增持股"),
+      h("div", { class: "mf-grid" },
+        h("div", { class: "mf-field" }, h("label", { for: "mf-code" }, "股票代號"), code, hint),
+        h("div", { class: "mf-field" }, h("label", { for: "mf-date" }, "買進日期"), date),
+        h("div", { class: "mf-field" }, h("label", { for: "mf-price" }, "買進價格（元）"), px),
+        h("div", { class: "mf-field" }, h("label", { for: "mf-shares" }, "股數"), sh)),
+      ruleBox, err,
+      h("div", { class: "mf-btns" },
+        h("button", { type: "submit", class: "mbtn primary" }, row ? "儲存" : "加入"),
+        h("button", { type: "button", class: "mbtn", onclick: close }, "取消"),
+        row ? h("button", { type: "button", id: "mf-del", class: "mbtn danger", onclick: del }, my.del === row.id ? "再按一次確定刪除" : "刪除") : null));
+  }
+
+  function myShare() {
+    function close() { my.mode = null; renderMine(); }
+    var note = h("span", { class: "mf-hint", role: "status" });
+    if (my.mode === "export") {
+      var code = myCode(my.rows), link = location.origin + location.pathname + "#import=" + code;
+      var ta = h("textarea", { class: "mcode", readonly: true, rows: "3", "aria-label": "持股代碼" });
+      ta.value = code;
+      var copy = function (text, what) {
+        return function () {
+          var done = function () { note.textContent = "已複製" + what + "。"; };
+          var fallback = function () { ta.value = text; ta.select(); try { document.execCommand("copy"); done(); } catch (e) { note.textContent = "沒辦法自動複製，請手動選取上面的文字。"; } };
+          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
+        };
+      };
+      return h("div", { class: "mshare" }, h("h4", null, "匯出持股"),
+        h("p", null, "把代碼貼到另一台裝置的「匯入」，就會有一樣的持股；或複製匯入連結，在另一台裝置打開就能匯入。代碼裡就是你的持股，不要傳給別人。"),
+        ta, h("div", { class: "mf-btns" },
+          h("button", { type: "button", class: "mbtn primary", onclick: copy(code, "代碼") }, "複製代碼"),
+          h("button", { type: "button", class: "mbtn", onclick: copy(link, "匯入連結") }, "複製匯入連結"),
+          h("button", { type: "button", class: "mbtn", onclick: close }, "關閉"), note));
+    }
+    var inp = h("textarea", { class: "mcode", rows: "3", placeholder: "貼上 FH1. 開頭的代碼，或整個匯入連結", "aria-label": "持股代碼" });
+    var err = h("p", { class: "mf-err", role: "alert" });
+    return h("div", { class: "mshare" }, h("h4", null, "匯入持股"),
+      h("p", null, my.rows.length ? "匯入會取代這台裝置上目前的 " + my.rows.length + " 筆持股。" : "貼上從另一台裝置匯出的代碼或連結。"),
+      inp, err, h("div", { class: "mf-btns" },
+        h("button", { type: "button", class: "mbtn primary", onclick: function () {
+          try { my.rows = myParse(inp.value); mySave(); my.msg = "已匯入 " + my.rows.length + " 筆持股。"; close(); }
+          catch (e) { err.textContent = e.message; }
+        } }, "匯入"),
+        h("button", { type: "button", class: "mbtn", onclick: close }, "取消")));
+  }
+
+  function incomingBox() {
+    var n = my.incoming.length;
+    function clearHash() { try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { location.hash = ""; } }
+    return h("div", { class: "mine-alert" }, h("b", null, "這個連結帶有 " + n + " 筆持股。"),
+      my.rows.length ? "匯入會取代這台裝置上目前的 " + my.rows.length + " 筆。" : "匯入後會存在這台裝置的瀏覽器。",
+      h("div", { class: "mf-btns" },
+        h("button", { type: "button", class: "mbtn primary", onclick: function () { my.rows = my.incoming; my.incoming = null; mySave(); clearHash(); my.msg = "已匯入 " + n + " 筆持股。"; renderMine(); } }, "匯入"),
+        h("button", { type: "button", class: "mbtn", onclick: function () { my.incoming = null; clearHash(); renderMine(); } }, "不要")));
+  }
+
+  function initMine() {
+    my.rows = myLoad();
+    var m = /#import=(FH1\.[A-Za-z0-9_-]+)/.exec(location.hash || "");
+    if (m) { try { my.incoming = myParse(m[1]); } catch (e) { my.incoming = null; } }
+    renderMine();
+    if (my.incoming) { var el = document.getElementById("mine"); if (el) el.scrollIntoView(); }
   }
 
   // ---------- 今日名單 ----------
@@ -1322,6 +1711,7 @@ footer a{color:var(--ink-2)}
   renderHeroData();
   renderTemp();
   renderMacro();
+  initMine();
   renderPicks();
   renderHistory();
   renderRank();

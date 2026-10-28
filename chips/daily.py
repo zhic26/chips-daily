@@ -28,6 +28,27 @@ def _inst_row(v):
     return [_i(v["foreign"]), _i(v["trust"]), _i(v["dealer"]), _i(v["total"])]
 
 
+def _keep_etf(ex, etf, market):
+    """ETF 收盤價（網頁「我的持股」用，不計分、不做資料檢查）：{代號: [名稱, 市場, 收盤, 漲跌]}。精簡版的日子不存。"""
+    if ex.get("light"):
+        return
+    ex.setdefault("etf", {}).update({c: [v["name"], market, _i(v["close"]), _i(v["diff"])]
+                                     for c, v in etf.items() if v["close"] is not None})
+
+
+def fill_etf(d, ex):
+    """更早存下、還沒有 ETF 收盤價的那天補抓一次行情（只取 ETF）。回傳是否有補。"""
+    if "etf" in ex or ex.get("light") or "twse_quotes" in (ex.get("pending") or []):
+        return False
+    tw, tp = {}, {}
+    S.twse_quotes(d, etf=tw)
+    S.tpex_quotes(d, etf=tp)
+    ex["etf"] = {}
+    _keep_etf(ex, tw, "上市")
+    _keep_etf(ex, tp, "上櫃")
+    return True
+
+
 def blank(d, light=False):
     ex = {"date": d.isoformat(), "fetchedAt": None, "pending": [] if light else list(SOURCES),
           "q": {}, "inst": {}, "margin": {}, "dt": {}, "shares": {}, "indices": {}, "market": {}}
@@ -44,9 +65,11 @@ def _run(src, d, ex, companies):
             return False
         ex["inst"].update({c: _inst_row(v) for c, v in r.items()})
     elif src == "twse_quotes":
-        stocks, idx, stats = S.twse_quotes(d)
+        etf = {}
+        stocks, idx, stats = S.twse_quotes(d, etf=etf)
         if not stocks:
             return False
+        _keep_etf(ex, etf, "上市")
         for c, v in stocks.items():
             ex["q"][c] = _quote_row(v, "上市")
             sh = (companies.get(c) or {}).get("shares")
@@ -56,9 +79,11 @@ def _run(src, d, ex, companies):
         if stats and stats.get("value"):
             ex["market"]["value"] = _i(stats["value"])
     elif src == "tpex_quotes":
-        stocks = S.tpex_quotes(d)
+        etf = {}
+        stocks = S.tpex_quotes(d, etf=etf)
         if not stocks:
             return False
+        _keep_etf(ex, etf, "上櫃")
         for c, v in stocks.items():
             ex["q"][c] = _quote_row(v, "上櫃")
             if v.get("shares") and not ex.get("light"):

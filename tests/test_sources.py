@@ -39,6 +39,34 @@ class Daily(unittest.TestCase):
                 self.assertLessEqual(v["low"], v["close"])
                 self.assertLessEqual(v["close"], v["high"])
 
+    def test_etf_prices(self):
+        """ETF 收盤價只放進 etf，不會混進計分用的個股；沒傳 etf 時行為不變。"""
+        with fake_web():
+            tw, tp = {}, {}
+            stocks, _, _ = S.twse_quotes(D, etf=tw)
+            plain, _, _ = S.twse_quotes(D)
+            otc = S.tpex_quotes(D, etf=tp)
+        self.assertEqual(set(stocks), set(plain))
+        for etf, quotes in ((tw, stocks), (tp, otc)):
+            self.assertTrue(etf)
+            self.assertFalse(set(etf) & set(quotes))
+            for code, v in etf.items():
+                self.assertTrue(S.is_etf(code), code)
+                self.assertTrue(v["name"])
+                self.assertTrue(v["close"] is None or v["close"] > 0)
+        self.assertTrue(S.is_etf("0050") and S.is_etf("006208") and S.is_etf("00679B"))
+        self.assertFalse(S.is_etf("2330") or S.is_etf("0050A1"))
+
+    def test_fill_etf(self):
+        from chips import daily
+        ex = {"date": D.isoformat(), "pending": [], "q": {}}
+        with fake_web():
+            self.assertTrue(daily.fill_etf(D, ex))
+            self.assertFalse(daily.fill_etf(D, ex))  # 已經有了就不再抓
+        markets = {r[1] for r in ex["etf"].values()}
+        self.assertEqual(markets, {"上市", "上櫃"})
+        self.assertFalse(daily.fill_etf(D, {"light": True}))
+
     def test_twse_margin(self):
         def more_rows(name, j):  # 樣本只留了 25 列，解析時要求超過 50 列才算完整
             if name == "twse_MI_MARGN":

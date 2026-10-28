@@ -17,7 +17,7 @@ from chips import model, site, store, tcal, track
 from chips import sources as S
 from chips.checks import DataError, check_picks
 from chips.bigholders import BigProvider
-from chips.daily import backfill_market, fetch_day, fetch_light
+from chips.daily import backfill_market, fetch_day, fetch_light, fill_etf
 from chips.net import FetchError
 
 STALE_WEEKDAYS = 8  # 超過這麼多個平日都沒抓到新資料，就當作出問題（農曆年連假最長約 7 個平日）
@@ -292,6 +292,15 @@ def main():
         enrich_market(hist, exs, problems)
     except Exception as e:
         problems.append(f"櫃買指數／外資期貨：{e!r}")
+
+    try:  # 「我的持股」要用的 ETF 收盤價（不計分）：最新一天如果是更早存的、還沒有 ETF，就補抓一次
+        if fill_etf(days[0], exs[days[0]]):
+            store.save_daily(days[0], exs[days[0]])
+            print(f"ETF 收盤價：補上 {days[0]}（{len(exs[days[0]]['etf'])} 檔）")
+    except FetchError as e:
+        print("ETF 收盤價下載失敗，下次再補：", e)
+    except Exception as e:
+        problems.append(f"ETF 收盤價：{e!r}")
 
     provider = BigProvider(cfg["tdcc_query_budget_seconds"])
     history = model.History(hist, exs)

@@ -83,6 +83,40 @@ def exit_status(cfg):
     return st, items
 
 
+def prices(cfg, d0, years, closed):
+    """網頁「我的持股」用的公開資料（docs/prices.json）：最新收盤價（個股和 ETF）、最近每天同市場的前 N 名、休市日。
+    使用者的持股只存在他自己的瀏覽器，網頁只來讀這個檔，不會把持股傳出去。"""
+    ex = store.load_daily(d0) or {}
+    p = {}
+    for src in (ex.get("q") or {}, ex.get("etf") or {}):
+        for c, r in src.items():
+            p[c] = [r[0], 0 if r[1] == "上市" else 1, r[2], r[3]]
+    # 當天沒有成交（收盤是空的）：用前幾天最近一次的收盤，最後一欄記是哪一天的
+    gone = [c for c, v in p.items() if v[2] is None]
+    for d in [x for x in store.daily_dates() if x < d0][:5]:
+        if not gone:
+            break
+        old = store.load_daily(d) or {}
+        for c in list(gone):
+            r = (old.get("q") or {}).get(c) or (old.get("etf") or {}).get(c)
+            if r and r[2] is not None:
+                p[c] = [p[c][0], p[c][1], r[2], 0, d.isoformat()]
+                gone.remove(c)
+    for c in gone:
+        del p[c]
+    rule = cfg.get("exit") or {}
+    lim, maxd = rule.get("rank", 80), rule.get("max_days", 60)
+    rank = {"dates": [], "top": []}
+    for d in sorted(store.picks_dates())[-(maxd + 5):]:
+        rk = (store.load_picks(d) or {}).get("ranking")
+        if rk:
+            rank["dates"].append(d.isoformat())
+            rank["top"].append([" ".join((rk.get(mk) or [])[:lim]) for mk in ("上市", "上櫃")])
+    shut = sorted(set(closed) | {x for v in years.values() for x in v})
+    return {"date": d0.isoformat(), "p": p, "etf": bool(ex.get("etf")), "rank": rank,
+            "cal": {"closed": shut, "known": sorted(years)}, "rule": {"rank": lim, "max_days": maxd}}
+
+
 def build(cfg, now):
     dates = store.picks_dates()
     if not dates:
@@ -125,6 +159,8 @@ def build(cfg, now):
         f.write(html)
     with open(os.path.join(DOCS, "latest.json"), "w", encoding="utf-8") as f:
         json.dump(latest, f, ensure_ascii=False, indent=1)
+    with open(os.path.join(DOCS, "prices.json"), "w", encoding="utf-8") as f:
+        json.dump(prices(cfg, d0, years, closed), f, ensure_ascii=False, separators=(",", ":"))
     # GitHub Pages 不要用 Jekyll 處理，直接照檔案輸出
     open(os.path.join(DOCS, ".nojekyll"), "w").close()
     print("網頁：docs/index.html")
