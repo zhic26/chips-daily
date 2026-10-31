@@ -161,6 +161,29 @@ class Update(unittest.TestCase):
         self.assertEqual(problems, [])
         self.assertTrue(m["tiles"]["sox"]["stale"])
 
+    def test_never_goes_back(self):
+        """Yahoo 有時回傳少了最後一天的資料：不能拿比較舊的蓋掉已經有的，ADR 溢價也要沿用。"""
+        now = dt.datetime(2026, 10, 25, 22, 0, tzinfo=TPE)
+        closes = {"2026-10-22": 1465.0, "2026-10-21": 1480.0}
+        m1, _ = M.update(now, closes, fetch_json=self.fetch)
+
+        def short(url):
+            j = self.fetch(url)
+            if "/chart/TSM?" in url:
+                j = json.loads(json.dumps(j))
+                r = j["chart"]["result"][0]
+                r["timestamp"] = r["timestamp"][:-1]
+                q = r["indicators"]["quote"][0]
+                for k in q:
+                    q[k] = q[k][:-1]
+            return j
+        m2, problems = M.update(now + dt.timedelta(hours=1), closes, fetch_json=short)
+        self.assertFalse([p for p in problems if "ADR" in p])  # 只剩測試資料故意放錯的 VIX
+        self.assertEqual(m2["tiles"]["tsm"], m1["tiles"]["tsm"])
+        self.assertNotIn("stale", m2["tiles"]["tsm"])
+        self.assertNotIn("台積電 ADR", m2["missing"])
+        self.assertEqual(m2["adr"], m1["adr"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -45,23 +45,24 @@ class Record(unittest.TestCase):
 
 
 class Results(unittest.TestCase):
-    """假市場：上市 4 檔，每天 1101 漲 1%、2330 漲 2%、其他平盤，連續 26 個交易日。"""
+    """假市場：上市 4 檔，每天 1101 漲 1%、2330 漲 2%、其他平盤；0050 每天漲 0.5%。連續 26 個交易日。"""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.data, self.daily = store.DATA, store.DAILY
         store.DATA, store.DAILY = self.tmp.name, os.path.join(self.tmp.name, "daily")
-        d, px = dt.date(2026, 9, 1), {"1101": 50.0, "2330": 1000.0, "2603": 200.0, "2002": 30.0}
+        d, px = dt.date(2026, 9, 1), {"1101": 50.0, "2330": 1000.0, "2603": 200.0, "2002": 30.0, "0050": 100.0}
         self.days = []
         while len(self.days) < 26:
             if d.weekday() < 5:
                 q = {}
                 for c, p in px.items():
-                    r = {"1101": 0.01, "2330": 0.02}.get(c, 0.0)
+                    r = {"1101": 0.01, "2330": 0.02, "0050": 0.005}.get(c, 0.0)
                     new = round(p * (1 + r), 4)
                     q[c] = ["x", "上市", new, round(new - p, 4), new, new, new, 5_000_000, new * 5_000_000, 0]
                     px[c] = new
-                store.save_daily(d, {"date": d.isoformat(), "q": q})
+                etf = {"0050": q.pop("0050")}
+                store.save_daily(d, {"date": d.isoformat(), "q": q, "etf": etf})
                 self.days.append(d)
             d += dt.timedelta(days=1)
 
@@ -90,6 +91,21 @@ class Results(unittest.TestCase):
         self.assertEqual(s["market"]["上市"]["n5"], 1)
         self.assertGreater(s["series"][0]["ex20"], 0)
         self.assertEqual(s["models"][0]["lists"], 2)
+        # 0050 對照：一樣隔天開盤買，5 日是之後 4 天各漲 0.5%
+        self.assertAlmostEqual(rows[0]["etf"]["5"], (1.005 ** 4 - 1) * 100, delta=0.02)  # 假資料每天四捨五入到小數 4 位
+        self.assertAlmostEqual(s["market"]["上市"]["vs5"], r["avg5"] - rows[0]["etf"]["5"], places=1)
+        self.assertEqual(s["market"]["上市"]["vsWin20"], 100)
+        self.assertGreater(s["series"][0]["vs5"], 0)
+
+    def test_etf_missing_day(self):
+        """0050 少了任何一天的完整行情（例如還沒補抓的舊格式），就不拿來比。"""
+        from chips.perf import etf_hold
+        exs = {d: store.load_daily(d) for d in self.days}
+        after = self.days[1:]
+        self.assertIsNotNone(etf_hold(after, exs.get, 5))
+        exs[after[2]] = dict(exs[after[2]], etf={"0050": ["元大台灣50", "上市", 100, 0.5]})  # 舊格式：沒有開盤價
+        self.assertIsNone(etf_hold(after, exs.get, 5))
+        self.assertIsNotNone(etf_hold(after, exs.get, 2))
 
 
 if __name__ == "__main__":

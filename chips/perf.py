@@ -35,6 +35,27 @@ def hold(code, after, exf, k):
     return round((v - 1) * 100, 2)
 
 
+BENCH_ETF = "0050"
+
+
+def etf_hold(after, exf, k, code=BENCH_ETF):
+    """ETF（預設 0050）用跟名單一樣的方式算：隔天開盤買、抱到第 k 個交易日收盤（%）。
+    中間少了任何一天的完整行情（例如還沒補抓的舊資料）就回傳 None，不拿不完整的數字比。"""
+    def q(d):
+        row = ((exf(d) or {}).get("etf") or {}).get(code)
+        return row if row and len(row) >= 10 else None
+    q1 = q(after[0])
+    if not q1 or not q1[Q_OPEN] or q1[Q_CLOSE] is None:
+        return None
+    v = q1[Q_CLOSE] / q1[Q_OPEN]
+    for d in after[1:k]:
+        r = day_ret(q(d))
+        if r is None:
+            return None
+        v *= 1 + r
+    return round((v - 1) * 100, 2)
+
+
 def universe(d, stored, exf, cfg):
     """選股日 d 通過流動性門檻的股票（同市場等權比較的對象）。"""
     i = stored.index(d)

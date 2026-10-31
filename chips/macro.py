@@ -244,7 +244,8 @@ def update(now, tw_close, fetch_json=None):
     fetch_json = fetch_json or (lambda u: get_json(u, retries=2))
     problems = []
     old = store.load_meta("macro", {}) or {}
-    raw = {}
+    old_tiles = old.get("tiles") or {}
+    raw, older = {}, set()
     for key, sym, name, _, (lo, hi) in SYMBOLS:
         try:
             s = parse_chart(fetch_json(CHART.format(urllib.parse.quote(sym))), now.timestamp())
@@ -254,6 +255,11 @@ def update(now, tw_close, fetch_json=None):
                 raise DataError(f"{name}最新值 {s[-1][1]} 不在合理範圍，資料可能有問題")
             if (now.date() - dt.date.fromisoformat(s[-1][0])).days > 7:
                 raise DataError(f"{name}最新資料停在 {s[-1][0]}，Yahoo 可能已經不更新這個代號")
+            prev = (old_tiles.get(key) or {}).get("date")
+            if prev and s[-1][0] < prev:
+                # Yahoo 偶爾回傳少了最後一天的資料（10/30、10/31 早上都發生過）：上次的比較新，整格沿用，ADR 溢價也不重算
+                older.add(key)
+                continue
             raw[key] = s
         except FetchError as e:
             print(f"  {name}下載失敗：{e}")
@@ -263,8 +269,10 @@ def update(now, tw_close, fetch_json=None):
     for key, _, name, unit, _ in SYMBOLS:
         if key in raw:
             tiles[key] = dict(stats(raw[key]), name=name, unit=unit)
-        elif key in (old.get("tiles") or {}):
-            tiles[key] = dict(old["tiles"][key], stale=True)  # 這次沒抓到：用上次的，網頁會註明日期
+        elif key in older:
+            tiles[key] = old_tiles[key]
+        elif key in old_tiles:
+            tiles[key] = dict(old_tiles[key], stale=True)  # 這次沒抓到：用上次的，網頁會註明日期
     adr = adr_premium(raw.get("tsm"), raw.get("twd"), tw_close)
     if not adr and old.get("adr"):
         adr = [tuple(x) for x in old["adr"]]
@@ -272,7 +280,7 @@ def update(now, tw_close, fetch_json=None):
     if manual and max(e["date"] for e in manual) < (now.date() + dt.timedelta(days=60)).isoformat():
         print("  提醒：events.json 只登記到", max(e["date"] for e in manual), "，記得補上之後的 CPI、非農與央行日期")
     m = {"tiles": tiles, "adr": [list(x) for x in adr], "events": upcoming(now, _fomc(now, problems), manual),
-         "read": read(tiles, adr), "missing": [NAMES[k] for k in NAMES if k not in raw]}
+         "read": read(tiles, adr), "missing": [NAMES[k] for k in NAMES if k not in raw and k not in older]}
     strip = lambda x: {k: v for k, v in x.items() if k not in ("asOf", "_saved")}  # noqa: E731
     same = old.get("asOf") and json.dumps(strip(old), sort_keys=True) == json.dumps(strip(m), sort_keys=True)
     m["asOf"] = old["asOf"] if same else now.isoformat(timespec="minutes")  # 數字沒變就不改時間，網頁才不會每次都變

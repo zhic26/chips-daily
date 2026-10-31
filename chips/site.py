@@ -4,7 +4,7 @@ import os
 
 from . import exits, store, tcal, track
 from .model import BENCH, Q_OPEN
-from .perf import avg as _avg, hold as _hold, universe as _universe
+from .perf import BENCH_ETF, avg as _avg, etf_hold, hold as _hold, universe as _universe
 
 TEMPLATE = os.path.join(store.ROOT, "site", "template.html")
 DOCS = os.path.join(store.ROOT, "docs")
@@ -50,8 +50,15 @@ def history(cfg):
                     s["avg" + key], s["bench" + key] = _avg(rets), b
                     s["beat" + key] = round(sum(1 for x in rets if b is not None and x > b) / len(rets) * 100) if rets and b is not None else None
             summary[mk] = s
+        # 0050 用一樣的買法（隔天開盤買）當對照：名單比的是同市場的一般股票，但真正的替代選擇常常是直接買 0050
+        etf = None
+        if n:
+            etf = {"code": BENCH_ETF, "now": etf_hold(after, exf, n)}
+            for k in (5, 20):
+                if n >= k:
+                    etf[str(k)] = etf_hold(after, exf, k)
         out.append({"date": doc["date"], "next": after[0].isoformat() if n else None, "days": n,
-                    "latest": stored[-1].isoformat(), "model": doc.get("model"), "summary": summary, "picks": rows})
+                    "latest": stored[-1].isoformat(), "model": doc.get("model"), "summary": summary, "etf": etf, "picks": rows})
     return out
 
 

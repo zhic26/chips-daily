@@ -175,6 +175,18 @@ section.block{padding:56px 0 6px}
 .exitbox summary{cursor:pointer;color:var(--accent);font-weight:600}
 .exitbox table{margin-top:6px}
 .exitbox .fine{margin:8px 0 0;font-size:12.5px}
+/* 小帳戶參考：只抱幾檔時從上市、上櫃合起來的分數排序挑 */
+.smallbox{margin:0 0 14px;padding:12px 16px 11px;border-radius:12px;background:var(--surface);border:1px solid var(--line-soft);max-width:52em;font-size:14.5px;color:var(--ink-2)}
+.smallbox>b{color:var(--ink);font-weight:600;margin-right:6px}
+.smallbox a{color:var(--accent);font-weight:600;text-decoration:none}
+.smallbox details{margin-top:6px;font-size:13.5px}
+.smallbox summary{cursor:pointer;color:var(--accent);font-weight:600}
+.smallbox details p{margin:6px 0 0;color:var(--ink-3);font-size:12.5px;line-height:1.65}
+.slotbox{margin:14px 0 0;padding:12px 14px;border-radius:12px;background:var(--sunk);border:1px solid var(--line);font-size:14.5px;color:var(--ink-2)}
+.slotbox .slot-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;color:var(--ink);font-weight:600}
+.slotbox select{font:inherit;font-weight:600;min-height:34px;padding:2px 8px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.slotbox p{margin:7px 0 0}
+.slotbox .fine{font-size:12.5px;line-height:1.65;color:var(--ink-3)}
 .mini .st{font-size:12.5px;color:var(--ink-2);white-space:nowrap}
 .plan{display:grid;gap:8px;margin:0 0 14px;padding:12px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line-soft)}
 .plan div{display:grid;grid-template-columns:5.2em minmax(0,1fr);gap:2px 10px;align-items:baseline}
@@ -443,6 +455,8 @@ section.block{padding:56px 0 6px}
 .hist-main:hover{background:color-mix(in srgb,var(--sunk) 55%,transparent)}
 .hist-date{font-weight:700;font-size:17px}
 .hist-date .wd{font-weight:400;font-size:13.5px;color:var(--ink-3);margin-left:6px}
+.hist-date .etf{display:block;font-weight:400;font-size:13px;color:var(--ink-3);margin-top:3px}
+.hist-date .etf .num{font-size:13px;font-weight:600}
 .hist-mk{grid-column:1/-1;display:grid;gap:8px}
 .mkt-perf{display:grid;grid-template-columns:2.6em repeat(3,minmax(0,1fr));gap:2px 12px;align-items:end}
 .mkt-perf b{font-weight:700;font-size:14px;color:var(--ink-2);padding-bottom:3px}
@@ -591,7 +605,7 @@ footer a{color:var(--ink-2)}
 
     <section class="block" id="history" aria-labelledby="history-h">
       <h2 id="history-h">之前的名單，後來表現如何</h2>
-      <p class="lead">假設名單公布後隔天開盤買進，看 5 個和 20 個交易日後的報酬，跟同市場所有合格股票用一樣方式買的平均比較（不是跟加權指數比）。除權息的影響已大致扣除。</p>
+      <p class="lead">假設名單公布後隔天開盤買進，看 5 個和 20 個交易日後的報酬，跟同市場所有合格股票用一樣方式買的平均比較，也列出同期間用一樣方式買 0050 的報酬。名單比的是一般股票：贏過同市場，不一定贏 0050。除權息的影響已大致扣除。</p>
       <div id="history-body"></div>
     </section>
 
@@ -1068,8 +1082,50 @@ footer a{color:var(--ink-2)}
     if (end === tdNext(last)) return { cls: "act", act: "收盤", at: end, text: "照規則 " + mdw(end) + "收盤賣：抱滿 " + X.maxd + " 個交易日" };
     var rk = ((D.exits || {}).rankNow || {})[r.c];
     var since = RK.dates.length && r.d < RK.dates[0] ? "（排名只對照得到 " + md(RK.dates[0]) + " 以後）" : "";
-    return { cls: "keep", text: "照規則繼續抱：現在" + mk + (rk ? "第 " + rk + " 名" : "前 " + X.lim + " 名內") + "，已抱 " + held + " 個交易日，最晚 " +
-      (guessed(end) ? "約 " : "") + mdw(end) + "收盤賣" + since };
+    return { cls: "keep", text: "照規則繼續抱：現在" + mk + (rk ? "第 " + rk + " 名" : "前 " + X.lim + " 名內") + "（掉到第 " + X.lim + " 名以後就賣），已抱 " + held +
+      " 個交易日；最多抱到" + (guessed(end) ? "約 " : " ") + mdw(end) + "收盤" + since };
+  }
+
+  // 小帳戶參考：資金分成 K 份、最多抱 K 檔，有空位才從當天名單（上市、上櫃合起來照分數排）依序補；賣出照參考規則。
+  // 回測數字在 D.exits.rule.slots（2026-10-31 的帳戶模擬）。K 只存在這台裝置的瀏覽器
+  var SLOT_OPTS = [3, 5, 10];
+  function slotInfo() { return ((D.exits || {}).rule || {}).slots || null; }
+  function slotK() {
+    var k = parseInt(store("slots"), 10), S = slotInfo();
+    return SLOT_OPTS.indexOf(k) >= 0 ? k : (S && S["default"]) || 5;
+  }
+  function combined() {
+    return (L.picks || []).slice().sort(function (a, b) { return b.score - a.score || b.instNet - a.instNet || a.rank - b.rank; });
+  }
+  function slotsText(k) {
+    var S = slotInfo(), o = S && S.k && S.k[String(k)];
+    if (!o) return "";
+    return "回測（" + S.period + "）：最多抱 " + k + " 檔、每天有空位就補，年化 " + fmt(o.daily[0], 1) + "%、最大回檔 " + pct(o.daily[1], 1) + "；只在週一買是年化 " +
+      fmt(o.weekly[0], 1) + "%、最大回檔 " + pct(o.weekly[1], 1) + "。同樣的規則改成從名單隨機挑股票、跑 200 次，年化落在 " + fmt(o.rand[0], 0) + "%～" + fmt(o.rand[2], 0) +
+      "%（中位數 " + fmt(o.rand[1], 0) + "%），有 " + o.lose + "% 輸給加權指數，所以檔數越少越看運氣。同期加權指數年化 " + fmt(S.taiex.cagr, 1) + "%（不含股息）、最大回檔 " +
+      pct(S.taiex.mdd, 1) + "：名單贏的是一般股票，不一定贏大盤，而且回檔比較深。";
+  }
+  function slotBox(st) {
+    var S = slotInfo(), all = combined();
+    if (!S || all.length < 3) return null;
+    var k = slotK(), E = D.exits || {}, held = {}, used = 0;
+    my.rows.forEach(function (r) {
+      held[r.c] = true;
+      if (!r.r || isEtf(r.c)) return;  // 只算有套用參考賣點的個股；ETF、自己挑的股票不佔格子
+      var s = st[r.id];
+      if (s && s.cls === "act" && s.act === "開盤") return;  // 下個交易日開盤就照規則賣掉，格子會空出來
+      used++;
+    });
+    var free = Math.max(0, k - used), cand = all.filter(function (p) { return !held[p.code]; }).slice(0, free);
+    var sel = h("select", { id: "slot-k", "aria-label": "最多抱幾檔", onchange: function (e) { store("slots", e.target.value); renderMine(true); renderPicks(); } },
+      SLOT_OPTS.map(function (n) { return h("option", { value: String(n), selected: n === k }, n + " 檔"); }));
+    var day = E.buyDate ? mdw(E.buyDate) : "下一個交易日";
+    var now = free && cand.length ? day + "開盤可以依序補：" + cand.map(function (p) { return p.name + " " + p.code; }).join("、") + "（今天名單上市、上櫃合起來分數最高、你還沒有的）。"
+      : free ? "今天的名單沒有可以補的股票。" : "格子都滿了，等有股票照規則賣掉再補。";
+    return h("div", { class: "slotbox" },
+      h("div", { class: "slot-head" }, h("label", { for: "slot-k" }, "小帳戶參考：最多抱"), sel),
+      h("p", null, "照規則的持股 " + used + " 檔（只算有套用參考賣點的個股），空 " + free + " 格。" + now),
+      h("p", { class: "fine" }, slotsText(k) + "依規則算出的參考，不是買賣建議。"));
   }
 
   // 價格載入完要重畫時（keep），保留表單裡已經打的字和游標所在的欄位
@@ -1130,12 +1186,16 @@ footer a{color:var(--ink-2)}
       if (s && s.cls === "act") { var k = s.act + s.at; (groups[k] = groups[k] || { s: s, names: [] }).names.push(myName(r)); }
       else if (s && s.cls === "late" && P.p[r.c]) late.push(myName(r));
     });
+    var XR = exitRule();
     Object.keys(groups).forEach(function (k) {
       var g = groups[k];
-      card.appendChild(h("p", { class: "mine-alert" }, h("b", null, "照規則 " + (guessed(g.s.at) ? "約 " : "") + mdw(g.s.at) + g.s.act + "要賣："),
+      card.appendChild(h("p", { class: "mine-alert" }, h("b", null, "照規則 " + (guessed(g.s.at) ? "約 " : "") + mdw(g.s.at) + g.s.act + "要賣" +
+        (g.s.act === "開盤" ? "（分數掉出同市場前 " + XR.lim + " 名）" : "（抱滿 " + XR.maxd + " 個交易日）") + "："),
         g.names.join("、") + "。依規則算出的參考，不是買賣建議。"));
     });
     if (late.length) card.appendChild(h("p", { class: "mine-alert soft" }, "有 " + late.length + " 檔照規則之前就該賣了：" + late.join("、") + "，原因寫在下面。"));
+    var slot = slotBox(st);
+    if (slot) card.appendChild(slot);
 
     if (has) {
       var rank = { act: 0, late: 1, keep: 2, "": 3 };
@@ -1333,6 +1393,8 @@ footer a{color:var(--ink-2)}
     if (rg) body.appendChild(rg);
     var xb = exitBox(state.market);
     if (xb) body.appendChild(xb);
+    var sb = smallBox();
+    if (sb) body.appendChild(sb);
     body.appendChild(h("div", { class: "summary" },
       h("span", null, "平均 ", num(fmt(avg, 1)), " 分"),
       h("span", null, "收漲 ", num(String(up), "up"), " 檔、收跌 ", num(String(dn), "down"), " 檔")));
@@ -1352,6 +1414,17 @@ footer a{color:var(--ink-2)}
     body.appendChild(panel);
   }
 
+  // 只想抱幾檔的人：上市、上櫃合起來分數最高的 K 檔（K 跟「我的持股」的小帳戶參考同一個設定）
+  function smallBox() {
+    var S = slotInfo(), all = combined(), R = (D.exits || {}).rule || {};
+    if (!S || all.length < 3) return null;
+    var k = slotK();
+    return h("div", { class: "smallbox" },
+      h("b", null, "只想抱 " + k + " 檔？"), "上市、上櫃合起來分數最高的是 " + all.slice(0, k).map(function (p) { return p.name; }).join("、") +
+        "。有空位才照這個順序補；買了記在", h("a", { href: "#holdings" }, "「我的持股」"), "，掉出同市場前 " + (R.rank || 80) + " 名時會提醒你賣。",
+      h("details", null, h("summary", null, "回測結果（也跟加權指數比）"), h("p", null, slotsText(k) + "依規則算出的參考，不是買賣建議。")));
+  }
+
   // 參考進出：依回測選出（平均報酬最高）。這裡只描述規則算出的結果，不是買賣建議
   function exitBox(mk) {
     var E = D.exits || {}, R = E.rule || {};
@@ -1369,7 +1442,8 @@ footer a{color:var(--ink-2)}
     var bt = (R.backtest || {}).rule || {}, b20 = (R.backtest || {}).hold20 || {};
     var box = h("div", { class: "exitbox" }, h("h3", null, "參考進出（依規則算出，不是買賣建議）"),
       h("p", { class: "rule" }, (E.buyDate ? md(E.buyDate) + "（" + wd(E.buyDate) + "）開盤買" : "名單公布隔天開盤買") + "；之後分數掉到同市場第 " + R.rank +
-        " 名以後，隔天開盤賣；最多抱 " + R.max_days + " 個交易日" + (E.lastDate ? "（" + (E.approx ? "約 " : "") + md(E.lastDate) + " 收盤）" : "") + "。點開每一檔可以看它的參考買點、賣點。"));
+        " 名以後，隔天開盤賣" + (bt.hold ? "（回測平均抱約 " + fmt(bt.hold, 0) + " 個交易日" + (bt.full != null ? "，抱滿 " + R.max_days + " 天的只有約 " + bt.full + "%" : "") + "）" : "") +
+        "；最多抱 " + R.max_days + " 個交易日" + (E.lastDate ? "（" + (E.approx ? "約 " : "") + md(E.lastDate) + " 收盤）" : "") + "。點開每一檔可以看它的參考買點、賣點。"));
     if (sell.length) box.appendChild(h("div", { class: "sell" }, h("b", null, "照規則" + (E.buyDate ? " " + md(E.buyDate) + "（" + wd(E.buyDate) + "）" : "明天") + "開盤要賣："),
       h("div", null, sell.map(function (x) {
         return h("span", { class: "s" }, x.name + " " + x.code + "｜" + md(x.date) + " 名單｜至今 " + pct(x.ret, 1));
@@ -1463,12 +1537,13 @@ footer a{color:var(--ink-2)}
       pf.style.width = Math.min(100, p.penalty / 15 * 100) + "%";
       rows.push(h("div", { class: "part pen" }, h("span", null, "籌碼偏重"), h("span", { class: "track" }, pf), h("span", { class: "pts" }, "−" + p.penalty)));
     }
-    var E = D.exits || {}, R = E.rule || {}, rk = (E.rankNow || {})[p.code];
+    var E = D.exits || {}, R = E.rule || {}, rk = (E.rankNow || {})[p.code], hd = ((R.backtest || {}).rule || {}).hold;
     var plan = R.rank && E.buyDate ? h("div", { class: "plan" },
       h("div", null, h("span", { class: "k" }, "參考買點"), h("b", null, md(E.buyDate) + "（" + wd(E.buyDate) + "）開盤買"),
         h("small", null, "今天收盤 " + price(p.close) + " 元；回測都是用隔天開盤價計算")),
       h("div", null, h("span", { class: "k" }, "參考賣點"), h("b", null, "分數掉到" + p.market + "第 " + R.rank + " 名以後，隔天開盤賣"),
-        h("small", null, (rk ? "現在全" + p.market + "第 " + rk + " 名；" : "") + "最晚 " + (E.approx ? "約 " : "") + md(E.lastDate) + "（" + wd(E.lastDate) + "）收盤賣，抱滿 " + R.max_days + " 個交易日")),
+        h("small", null, (rk ? "現在全" + p.market + "第 " + rk + " 名。" : "") + (hd ? "回測裡大多在這時候就賣掉，平均抱約 " + fmt(hd, 0) + " 個交易日；" : "") +
+          "最多抱到" + (E.approx ? "約 " : " ") + md(E.lastDate) + "（" + wd(E.lastDate) + "）收盤，也就是第 " + R.max_days + " 個交易日")),
       h("p", { class: "pnote" }, "依規則算出的參考，不是買賣建議。")) : null;
     var left = h("div", null, plan, h("p", { class: "reason" }, p.reason), h("div", { class: "parts" }, rows));
     var facts = h("div", { class: "facts" },
@@ -1511,8 +1586,10 @@ footer a{color:var(--ink-2)}
       var m = mean(rows.map(function (x) { return x["ex" + k]; })), mk = R.market || {};
       var per = MK.map(function (x) { var v = (mk[x] || {})["ex" + k]; return v == null ? null : x + " " + pct(v); }).filter(Boolean).join("、");
       var win = rows.filter(function (x) { return x["ex" + k] > 0; }).length;
+      var ev = rows.filter(function (x) { return x["vs" + k] != null; }), evm = ev.length ? mean(ev.map(function (x) { return x["vs" + k]; })) : null;
+      var etf = ev.length ? "比 0050 " + pct(evm) + "，贏 0050 的 " + ev.filter(function (x) { return x["vs" + k] > 0; }).length + " 份。" : "";
       return h("div", null, label + "（" + rows.length + " 份）", num(pct(m), dir(m)),
-        h("span", { class: "vs" }, per + "；贏過同市場的 " + win + " 份。回測：" + ref + "。"));
+        h("span", { class: "vs" }, per + "；贏過同市場的 " + win + " 份。" + etf + "回測：" + ref + "。"));
     }
     panel.appendChild(h("div", { class: "track-grid" }, block(5, e5), block(20, e20)));
     if (e5.length >= 3) panel.appendChild(h("div", { class: "track-chart" }, h("small", null, "每份名單的 5 日超額（左舊右新）"), bars(e5.map(function (x) { return x.ex5; }), { diverge: true })));
@@ -1523,7 +1600,7 @@ footer a{color:var(--ink-2)}
         return h("tr", null, h("td", null, "第 " + x.model + " 版"), h("td", null, md(x.from) + "～" + md(x.to)), h("td", null, String(x.lists)),
           h("td", { class: dir(x.ex5) }, pct(x.ex5)), h("td", { class: dir(x.ex20) }, pct(x.ex20)));
       })))));
-    panel.appendChild(h("p", { class: "mnote" }, "超額＝名單平均報酬減掉同市場合格股票的平均，隔天開盤買進起算，沒有扣交易成本（一買一賣約 0.4%）。份數少的時候數字跳動很大，至少累積 3 個月再下結論。"));
+    panel.appendChild(h("p", { class: "mnote" }, "超額＝名單平均報酬減掉同市場合格股票的平均；「比 0050」＝名單平均減掉同期間的 0050。都從隔天開盤買進起算，沒有扣交易成本（一買一賣約 0.4%）。份數少的時候數字跳動很大，至少累積 3 個月再下結論。"));
     return panel;
   }
 
@@ -1535,11 +1612,13 @@ footer a{color:var(--ink-2)}
     if (!hist.length) { body.appendChild(h("p", { class: "empty-state panel" }, "名單公布後的下一個交易日收盤，這裡就會開始顯示表現。")); return; }
     var top = h("div", { class: "perf-top" });
     MK.forEach(function (mk) {
-      var a = [], b = [], win = 0;
+      var a = [], b = [], win = 0, e = [], ewin = 0;
       hist.forEach(function (x) {
-        var s = x.summary[mk] || {};
+        var s = x.summary[mk] || {}, t = (x.etf || {})["5"];
         if (s.avg5 != null && s.bench5 != null) { a.push(s.avg5); b.push(s.bench5); if (s.avg5 > s.bench5) win++; }
+        if (s.avg5 != null && t != null) { e.push(t); if (s.avg5 > t) ewin++; }
       });
+      var etfTxt = e.length ? "同期 0050 " + pct(mean(e)) + "，贏 0050 的有 " + ewin + " 份" + (e.length < a.length ? "（" + e.length + " 份有 0050 資料）" : "") + "。" : "";
       var bt = B && B.overall && B.overall[mk];
       var ref = bt ? "回測（" + B.period + "）平均 5 日比同市場" + rel(bt.d5) + "、20 日" + rel(bt.d20) + "。" : "";
       if (!a.length) {
@@ -1549,14 +1628,16 @@ footer a{color:var(--ink-2)}
       }
       var ma = mean(a), mb = mean(b);
       top.appendChild(h("div", null, mk + "名單 5 日平均（" + a.length + " 份名單）", num(pct(ma), dir(ma)),
-        h("span", { class: "vs" }, "同市場 " + pct(mb) + "，名單贏的有 " + win + " 份。" + ref)));
+        h("span", { class: "vs" }, "同市場 " + pct(mb) + "，名單贏的有 " + win + " 份。" + etfTxt + ref)));
     });
     var ul = h("ul", { class: "hist" });
     hist.forEach(function (x) {
       var inner = h("div");
       var li = h("li");
+      var ek = x.days >= 20 ? "20" : x.days >= 5 ? "5" : "now", ev = (x.etf || {})[ek];
       var btn = h("button", { type: "button", class: "hist-main", "aria-expanded": "false" },
-        h("span", { class: "hist-date" }, md(x.date), h("span", { class: "wd" }, wd(x.date) + "的名單")),
+        h("span", { class: "hist-date" }, md(x.date), h("span", { class: "wd" }, wd(x.date) + "的名單"),
+          ev != null ? h("span", { class: "etf" }, "同期 0050 " + (ek === "now" ? "至今 " : ek + " 日 "), num(pct(ev), dir(ev))) : null),
         h("span", { class: "hist-mk" }, MK.map(function (mk) {
           var s = x.summary[mk] || {};
           var cells = x.days >= 20 ? [cell("5 日", pct(s.avg5), s.avg5), cell("20 日", pct(s.avg20), s.avg20), cell("同市場 20 日", pct(s.bench20), s.bench20)]
@@ -1571,7 +1652,7 @@ footer a{color:var(--ink-2)}
     });
     body.appendChild(h("div", { class: "panel" }, top, ul));
     body.appendChild(h("p", { class: "fine" }, "報酬從名單公布後隔天的開盤價起算，「至今」算到最新收盤 " + md(hist[0].latest) +
-      "。同市場是當天所有符合流動性門檻的股票，用一樣的方式買進的平均。沒有扣除交易成本（一買一賣約 0.4%）。點日期可以看每一檔。過去表現不代表未來。"));
+      "。同市場是當天所有符合流動性門檻的股票，用一樣的方式買進的平均；0050 也是隔天開盤買進起算。沒有扣除交易成本（一買一賣約 0.4%）。點日期可以看每一檔。過去表現不代表未來。"));
   }
 
   function exitText(s) {
@@ -1679,10 +1760,14 @@ footer a{color:var(--ink-2)}
         (D.backtest.breadth_cut || [35])[0] + "% 時參考價值較低，所以名單上方會依當天狀況提醒。") : null,
       D.exits && D.exits.rule && D.exits.rule.backtest ? h("h3", null, "參考進出規則") : null,
       D.exits && D.exits.rule && D.exits.rule.backtest ? h("p", null, "名單公布隔天開盤買；之後每天收盤後，只要分數掉到同市場第 " + D.exits.rule.rank +
-        " 名以後，隔天開盤賣；最多抱 " + D.exits.rule.max_days + " 個交易日。這是用 " + D.exits.rule.backtest.period + " 的 " + fmt(D.exits.rule.backtest.trades) +
+        " 名以後，隔天開盤賣；最多抱 " + D.exits.rule.max_days + " 個交易日。回測平均抱約 " + fmt(D.exits.rule.backtest.rule.hold, 0) + " 個交易日就因為名次掉下去賣掉" +
+        (D.exits.rule.backtest.rule.full != null ? "，抱滿 " + D.exits.rule.max_days + " 天的只有約 " + D.exits.rule.backtest.rule.full + "%" : "") +
+        "。這是用 " + D.exits.rule.backtest.period + " 的 " + fmt(D.exits.rule.backtest.trades) +
         " 筆名單交易，比較固定抱 5～60 天、停損、移動停損、跳空不追、掛低一點買等做法後，平均報酬最高的一種：換算每 20 個交易日淨賺 " + fmt(D.exits.rule.backtest.rule.per20, 1) +
         "%，固定抱 20 天是 " + fmt(D.exits.rule.backtest.hold20.per20, 1) + "%；最差的 5% 交易約 " + fmt(D.exits.rule.backtest.rule.worst5, 0) + "%，固定抱 20 天約 " +
-        fmt(D.exits.rule.backtest.hold20.worst5, 0) + "%。代價是勝率比較低（" + D.exits.rule.backtest.rule.win + "%），而且換股比較頻繁。這兩年大多是多頭，空頭時的表現還沒驗證過。") : null,
+        fmt(D.exits.rule.backtest.hold20.worst5, 0) + "%。代價是勝率比較低（" + D.exits.rule.backtest.rule.win + "%），而且換股比較頻繁。" +
+        (D.exits.rule.backtest.price ? "也試過用固定價格出場（" + D.exits.rule.backtest.price.text + "），每 20 個交易日淨賺只剩 " + D.exits.rule.backtest.price.range +
+          "，因為停損常賣在之後會漲回來的回檔，停利又提早砍掉跑最遠的股票，所以沒有採用。" : "") + "這兩年大多是多頭，空頭時的表現還沒驗證過。") : null,
       h("h3", null, "什麼時候更新"),
       h("p", null, "每個交易日晚上 9 點 40 分到 11 點多之間會自動更新好幾次（融資融券約 9 點半才公布；網站的排程常晚一點，所以多排幾次），隔天早上開盤前再檢查幾次有沒有補上的資料。集保千張大戶一週更新一次" +
         (t.week ? "，這次用 " + md(t.week) + " 那一週和 " + (t.prevWeek ? md(t.prevWeek) : "前一週") + " 比較。" : "。")),

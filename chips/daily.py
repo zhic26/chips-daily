@@ -29,16 +29,23 @@ def _inst_row(v):
 
 
 def _keep_etf(ex, etf, market):
-    """ETF 收盤價（網頁「我的持股」用，不計分、不做資料檢查）：{代號: [名稱, 市場, 收盤, 漲跌]}。精簡版的日子不存。"""
+    """ETF 行情（不計分、不做資料檢查），格式跟個股的 q 一樣：[名稱, 市場, 收盤, 漲跌, 開盤, 最高, 最低, 成交股數, 成交金額, 除權息]。
+    「我的持股」用收盤價；「之前的名單」用 0050 的開盤、收盤當對照。精簡版的日子不存。"""
     if ex.get("light"):
         return
-    ex.setdefault("etf", {}).update({c: [v["name"], market, _i(v["close"]), _i(v["diff"])]
-                                     for c, v in etf.items() if v["close"] is not None})
+    ex.setdefault("etf", {}).update({c: _quote_row(v, market) for c, v in etf.items() if v["close"] is not None})
+
+
+def etf_full(ex):
+    """這天的 ETF 行情是完整格式嗎？（10/30 以前存的只有收盤和漲跌，沒有開盤價）"""
+    rows = ex.get("etf") or {}
+    row = rows.get("0050") or next(iter(rows.values()), None)
+    return bool(row) and len(row) >= 10
 
 
 def fill_etf(d, ex):
-    """更早存下、還沒有 ETF 收盤價的那天補抓一次行情（只取 ETF）。回傳是否有補。"""
-    if "etf" in ex or ex.get("light") or "twse_quotes" in (ex.get("pending") or []):
+    """更早存下、還沒有完整 ETF 行情的那天補抓一次行情（只取 ETF）。回傳是否有補。"""
+    if etf_full(ex) or ex.get("light") or "twse_quotes" in (ex.get("pending") or []):
         return False
     tw, tp = {}, {}
     S.twse_quotes(d, etf=tw)

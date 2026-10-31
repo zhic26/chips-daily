@@ -132,7 +132,7 @@ TWSE_INDEX_NAMES = {
 
 def twse_quotes(d, etf=None):
     """每日收盤行情：(個股 {代號: {...}}, 指數 {顯示名稱: {close, chg, chgPct}}, 大盤統計 {value 總成交金額})。
-    傳入 etf（dict）時，順便把同一張表裡的 ETF 收盤價放進去：{代號: {name, close, diff}}。"""
+    傳入 etf（dict）時，順便把同一張表裡的 ETF 行情放進去，欄位跟個股一樣（開盤、收盤、漲跌…）。"""
     j = _get(f"{TWSE}/afterTrading/MI_INDEX?date={d:%Y%m%d}&type=ALLBUT0999&response=json")
     if not j:
         return None, None, None
@@ -152,13 +152,11 @@ def twse_quotes(d, etf=None):
         sign_txt = str(r[c["sign"]])
         sign = -1 if ("-" in re.sub(r"<[^>]+>", "", sign_txt) or "green" in sign_txt) else 1
         diff = num(r[c["diff"]])
-        if not common:
-            etf[code] = {"name": str(r[1]).strip(), "close": num(r[c["close"]]), "diff": None if diff is None else sign * diff}
-            continue
-        stocks[code] = {"name": str(r[1]).strip(), "close": num(r[c["close"]]), "open": num(r[c["open"]]),
-                        "high": num(r[c["high"]]), "low": num(r[c["low"]]), "vol": z(r[c["vol"]]),
-                        "amt": z(r[c["amt"]]), "diff": None if diff is None else sign * diff,
-                        "exRight": "X" in re.sub(r"<[^>]+>", "", sign_txt)}
+        row = {"name": str(r[1]).strip(), "close": num(r[c["close"]]), "open": num(r[c["open"]]),
+               "high": num(r[c["high"]]), "low": num(r[c["low"]]), "vol": z(r[c["vol"]]),
+               "amt": z(r[c["amt"]]), "diff": None if diff is None else sign * diff,
+               "exRight": "X" in re.sub(r"<[^>]+>", "", sign_txt)}
+        (stocks if common else etf)[code] = row
     indices = {}
     for t in _tables(j, "指數"):
         for r in t.get("data") or []:
@@ -261,7 +259,7 @@ def tpex_inst(d):
 
 
 def tpex_quotes(d, etf=None):
-    """上櫃每日收盤行情：{代號: {...}}。傳入 etf（dict）時，順便把 ETF 收盤價放進去（同 twse_quotes）。"""
+    """上櫃每日收盤行情：{代號: {...}}。傳入 etf（dict）時，順便把 ETF 行情放進去（同 twse_quotes）。"""
     j = _get(f"{TPEX}/afterTrading/otc?date={d:%Y/%m/%d}&type=EW&response=json")
     if not j:
         return None
@@ -275,14 +273,14 @@ def tpex_quotes(d, etf=None):
         code = str(r[0]).strip()
         if len(r) <= max(c.values()):
             continue
-        if not is_common_stock(code):
-            if etf is not None and is_etf(code):
-                etf[code] = {"name": str(r[1]).strip(), "close": num(r[c["close"]]), "diff": num(r[c["diff"]])}
+        common = is_common_stock(code)
+        if not common and not (etf is not None and is_etf(code)):
             continue
-        out[code] = {"name": str(r[1]).strip(), "close": num(r[c["close"]]), "open": num(r[c["open"]]),
-                     "high": num(r[c["high"]]), "low": num(r[c["low"]]), "vol": z(r[c["vol"]]),
-                     "amt": z(r[c["amt"]]), "diff": num(r[c["diff"]]), "shares": z(r[c["shares"]]),
-                     "exRight": False}
+        row = {"name": str(r[1]).strip(), "close": num(r[c["close"]]), "open": num(r[c["open"]]),
+               "high": num(r[c["high"]]), "low": num(r[c["low"]]), "vol": z(r[c["vol"]]),
+               "amt": z(r[c["amt"]]), "diff": num(r[c["diff"]]), "shares": z(r[c["shares"]]),
+               "exRight": False}
+        (out if common else etf)[code] = row
     return out
 
 

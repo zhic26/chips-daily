@@ -9,7 +9,7 @@ import os
 
 from . import store
 from .model import BENCH
-from .perf import avg, hold, universe
+from .perf import BENCH_ETF, avg, etf_hold, hold, universe
 
 TPE = dt.timezone(dt.timedelta(hours=8))
 DIR = os.path.join(store.DATA, "track")
@@ -81,6 +81,7 @@ def results(cfg):
                         r[f"beat{k}"] = round(sum(1 for x in rets if x > b) / len(rets) * 100) if rets and b is not None else None
                 res[mk] = r
             t["result"] = res
+            t["etf"] = {"code": BENCH_ETF, "5": etf_hold(after, exf, 5), "20": etf_hold(after, exf, 20) if n >= 20 else None}
             if n >= 20:
                 t["final"] = True
                 store._write(f, t)
@@ -91,6 +92,17 @@ def results(cfg):
 def _excess(r, k):
     a, b = r.get(f"avg{k}"), r.get(f"bench{k}")
     return None if a is None or b is None else a - b
+
+
+def _vs_etf(t, mk, k):
+    """名單平均報酬減掉同期間 0050（一樣隔天開盤買）。"""
+    a = ((t.get("result") or {}).get(mk) or {}).get(f"avg{k}")
+    b = (t.get("etf") or {}).get(str(k))
+    return None if a is None or b is None else a - b
+
+
+def _mean(xs):
+    return round(sum(xs) / len(xs), 2) if xs else None
 
 
 def summary(rows, cfg):
@@ -105,6 +117,9 @@ def summary(rows, cfg):
             m[f"n{k}"] = len(ex)
             m[f"ex{k}"] = round(sum(ex) / len(ex), 2) if ex else None
             m[f"win{k}"] = round(sum(1 for e in ex if e > 0) / len(ex) * 100) if ex else None
+            vs = [e for e in (_vs_etf(t, mk, k) for t in rows) if e is not None]
+            m[f"vsN{k}"], m[f"vs{k}"] = len(vs), _mean(vs)
+            m[f"vsWin{k}"] = round(sum(1 for e in vs if e > 0) / len(vs) * 100) if vs else None
     by = {}
     for t in rows:
         res = t.get("result") or {}
@@ -112,6 +127,8 @@ def summary(rows, cfg):
         e20 = [e for e in (_excess(res.get(mk) or {}, 20) for mk in BENCH) if e is not None]
         row = {"date": t["date"], "model": t["model"], "ex5": round(sum(e5) / len(e5), 2) if e5 else None,
                "ex20": round(sum(e20) / len(e20), 2) if e20 else None}
+        for k in (5, 20):
+            row[f"vs{k}"] = _mean([e for e in (_vs_etf(t, mk, k) for mk in BENCH) if e is not None])
         out["series"].append(row)
         b = by.setdefault(t["model"], {"model": t["model"], "lists": 0, "from": t["date"], "e5": [], "e20": []})
         b["lists"] += 1

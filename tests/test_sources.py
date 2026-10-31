@@ -54,6 +54,9 @@ class Daily(unittest.TestCase):
                 self.assertTrue(S.is_etf(code), code)
                 self.assertTrue(v["name"])
                 self.assertTrue(v["close"] is None or v["close"] > 0)
+                if None not in (v["close"], v["open"], v["high"], v["low"]):  # 欄位跟個股一樣，0050 對照要用開盤價
+                    self.assertLessEqual(v["low"], min(v["open"], v["close"]))
+                    self.assertGreaterEqual(v["high"], max(v["open"], v["close"]))
         self.assertTrue(S.is_etf("0050") and S.is_etf("006208") and S.is_etf("00679B"))
         self.assertFalse(S.is_etf("2330") or S.is_etf("0050A1"))
 
@@ -65,7 +68,12 @@ class Daily(unittest.TestCase):
             self.assertFalse(daily.fill_etf(D, ex))  # 已經有了就不再抓
         markets = {r[1] for r in ex["etf"].values()}
         self.assertEqual(markets, {"上市", "上櫃"})
+        self.assertTrue(all(len(r) == 10 for r in ex["etf"].values()))  # 跟個股的 q 同格式
         self.assertFalse(daily.fill_etf(D, {"light": True}))
+        old = {"date": D.isoformat(), "pending": [], "q": {}, "etf": {"0050": ["元大台灣50", "上市", 100, 0.5]}}
+        with fake_web():
+            self.assertTrue(daily.fill_etf(D, old))  # 10/30 以前存的舊格式（沒有開盤價）要重抓
+        self.assertTrue(daily.etf_full(old))
 
     def test_twse_margin(self):
         def more_rows(name, j):  # 樣本只留了 25 列，解析時要求超過 50 列才算完整

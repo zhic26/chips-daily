@@ -293,14 +293,24 @@ def main():
     except Exception as e:
         problems.append(f"櫃買指數／外資期貨：{e!r}")
 
-    try:  # 「我的持股」要用的 ETF 收盤價（不計分）：最新一天如果是更早存的、還沒有 ETF，就補抓一次
-        if fill_etf(days[0], exs[days[0]]):
-            store.save_daily(days[0], exs[days[0]])
-            print(f"ETF 收盤價：補上 {days[0]}（{len(exs[days[0]]['etf'])} 檔）")
+    try:  # ETF 行情（不計分）：「我的持股」用收盤價，「之前的名單」用 0050 當對照。更早存的日子還沒有完整行情，就補抓
+        lists = store.picks_dates()[:cfg["history_days"]]
+        since = min(lists) if lists else days[0]
+        todo = [d for d in sorted(store.daily_dates()) if since <= d <= days[0]]
+        done = []
+        for d in todo:
+            if len(done) >= 12:  # 一次最多補 12 天（證交所、櫃買各一次請求），剩下的下次再補
+                break
+            ex = exs.get(d) or store.load_daily(d)
+            if ex and fill_etf(d, ex):
+                store.save_daily(d, ex)
+                done.append(d.isoformat())
+        if done:
+            print(f"ETF 行情：補上 {len(done)} 天（{done[0]}～{done[-1]}）")
     except FetchError as e:
-        print("ETF 收盤價下載失敗，下次再補：", e)
+        print("ETF 行情下載失敗，下次再補：", e)
     except Exception as e:
-        problems.append(f"ETF 收盤價：{e!r}")
+        problems.append(f"ETF 行情：{e!r}")
 
     provider = BigProvider(cfg["tdcc_query_budget_seconds"])
     history = model.History(hist, exs)
