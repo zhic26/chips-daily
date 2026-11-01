@@ -356,7 +356,8 @@ def main():
     try:  # 國際盤勢只是顯示用，任何錯誤都不擋住名單
         tw_close = {d.isoformat(): exs[d]["q"]["2330"][model.Q_CLOSE] for d in hist
                     if (exs[d]["q"].get("2330") or [None] * 3)[model.Q_CLOSE]}
-        mac, bad = M.update(now, tw_close)
+        taiex = {d.isoformat(): ((exs[d].get("indices") or {}).get("加權指數") or {}).get("chgPct") for d in hist}
+        mac, bad = M.update(now, tw_close, taiex={k: v for k, v in taiex.items() if v is not None})
         problems += bad
         print("國際盤勢：", "；".join(mac["read"][:2]) or "沒有資料", ("（沒抓到：" + "、".join(mac["missing"]) + "）") if mac["missing"] else "")
     except Exception as e:
