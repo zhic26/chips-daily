@@ -407,6 +407,16 @@ section.block{padding:56px 0 6px}
 .events b{font-weight:600;font-size:15px}
 .events p{margin:2px 0 0;font-size:13px;color:var(--ink-3)}
 .events .soon time{color:var(--accent)}
+@media (min-width:900px){
+  .macro-cols.has-past{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .macro-cols.has-past .howto{grid-column:1/-1}
+  .macro-cols.has-past .howto ul{display:block;columns:2;column-gap:32px}
+  .macro-cols.has-past .howto li{break-inside:avoid;margin-bottom:7px}
+}
+@media (max-width:600px){.events li{grid-template-columns:5.9em minmax(0,1fr);gap:2px 10px}}
+.events.past time{color:var(--ink-2)}
+.events.past .res{color:var(--ink-2);font-size:14px;line-height:1.55}
+.events.past .react{font-size:12.5px;line-height:1.55}
 .howto summary{cursor:pointer;font-weight:600;font-size:15px;display:flex;justify-content:space-between;align-items:center;padding-bottom:8px;list-style:none}
 .howto summary::-webkit-details-marker{display:none}
 .howto[open] .chev{transform:rotate(180deg)}
@@ -977,18 +987,28 @@ footer a{color:var(--ink-2)}
       (M.read || []).length ? h("ul", { class: "reads" }, M.read.map(function (x) { return h("li", null, x); })) : null,
       M.missing && M.missing.length ? h("p", { class: "mnote" }, "這次沒抓到：" + M.missing.join("、") + "（有上次的數字就照舊顯示，並註明日期）。") : null);
     body.appendChild(panel);
-    var now = Date.now(), evs = M.events || [];
+    var now = Date.now(), evs = M.events || [], past = M.past || [];
+    function evTime(e) { var dd = e.at.slice(0, 10); return h("time", { datetime: e.at }, md(dd) + " " + wd(dd), e.hasTime ? h("small", null, clock(e.at)) : null); }
     var ev = h("div", { class: "panel mpanel" }, h("h3", null, "接下來的大事（台北時間）"),
       evs.length ? h("ul", { class: "events" }, evs.map(function (e) {
-        var dd = e.at.slice(0, 10), soon = new Date(e.at).getTime() - now < 3 * 864e5;
-        return h("li", { class: soon ? "soon" : null }, h("time", { datetime: e.at }, md(dd) + " " + wd(dd), e.hasTime ? h("small", null, clock(e.at)) : null),
+        var soon = new Date(e.at).getTime() - now < 3 * 864e5;
+        return h("li", { class: soon ? "soon" : null }, evTime(e),
           h("div", null, h("b", null, e.name), h("p", null, EV_NOTE[e.kind] || "")));
       })) : h("p", { class: "fine" }, "接下來 40 天沒有登記的重要事件。"));
+    // 已經過去的大事：每一種留最近一次（Fed、CPI、非農、台灣央行），附當晚美股和接著台股的漲跌
+    var res = past.length ? h("div", { class: "panel mpanel" }, h("h3", null, "最近公布的結果（台北時間）"),
+      h("ul", { class: "events past" }, past.map(function (e) {
+        return h("li", null, evTime(e), h("div", null, h("b", null, e.name),
+          e.result ? h("p", { class: "res" }, e.result) : e.pending ? h("p", null, e.pending) : null,
+          e.react ? h("p", { class: "react" }, e.react) : null));
+      }))) : null;
     var how = h("details", { class: "panel mpanel howto" }, h("summary", null, "這些數字怎麼看", chev()),
       h("ul", null, MACRO_HOW.map(function (x) { return h("li", null, h("b", null, x[0]), x[1]); })));
     if (window.matchMedia && window.matchMedia("(min-width: 900px)").matches) how.open = true;
-    body.appendChild(h("div", { class: "macro-cols" }, ev, how));
+    body.appendChild(h("div", { class: "macro-cols" + (res ? " has-past" : "") }, ev, res, how));
     body.appendChild(h("p", { class: "fine" }, "國際行情來自 Yahoo Finance（非官方介面，偶爾會延遲或抓不到），事件日期來自美國聯準會、美國勞工統計局與中央銀行。" +
+      "Fed 的結果取自聯準會會後聲明，CPI 與非農是美國勞工統計局的官方數字（從聖路易聯準銀行的資料庫下載）；台灣央行和選舉的結果是手動整理的。" +
+      "市場反應只列出當天的漲跌，同一天也可能有別的消息，不代表都是那件事造成的。" +
       "回測裡，美股前一晚的漲跌在台股隔天的開盤價就反映了（費半當晚漲跌和台股隔天開盤跳空的相關係數 0.63，和開盤後到收盤只有 −0.14），" +
       "而名單是隔天開盤買，所以這一區只描述大環境，不放進分數，也不是對後市的判斷。"));
   }

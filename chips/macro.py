@@ -8,6 +8,7 @@
 - Yahoo Finance 的走勢圖介面（非官方，可能改版；抓不到時這一區顯示上次的數字並註明，名單照常更新）
 - 美國聯準會網站的 FOMC 會議日程（每週重抓一次）
 - 手動維護的 events.json：美國 CPI、非農就業、台灣央行理監事會（每年底補上隔年的日期）
+- 已經過去的事件公布了什麼、市場怎麼動：見 events.py
 """
 import datetime as dt
 import json
@@ -16,6 +17,7 @@ import re
 import urllib.parse
 from zoneinfo import ZoneInfo
 
+from . import events as E
 from . import store
 from .checks import DataError
 from .net import FetchError, get_json, get_text
@@ -139,8 +141,8 @@ def parse_fomc(html):
     return sorted({x["date"]: x for x in out}.values(), key=lambda x: x["date"])
 
 
-def upcoming(now, fomc, manual, days=40, limit=6):
-    """接下來 days 天內的事件，換算成台北時間。"""
+def timeline(fomc, manual):
+    """所有事件（Fed 會議＋events.json），at 換算成台北時間；沒寫時間的當作那天 23:59。"""
     ev = [{"date": m["date"], "time": "14:00", "tz": "America/New_York", "kind": "fomc_sep" if m.get("sep") else "fomc",
            "name": "Fed 利率決策"} for m in fomc]
     out = []
@@ -149,14 +151,16 @@ def upcoming(now, fomc, manual, days=40, limit=6):
         if e.get("time"):
             hh, mm = (int(x) for x in e["time"].split(":"))
             at = dt.datetime(d.year, d.month, d.day, hh, mm, tzinfo=ZoneInfo(e.get("tz") or "Asia/Taipei")).astimezone(TPE)
-            show = at
         else:
             at = dt.datetime(d.year, d.month, d.day, 23, 59, tzinfo=TPE)
-            show = None
-        if now - dt.timedelta(hours=3) <= at <= now + dt.timedelta(days=days):
-            out.append({"at": (show or at).isoformat(timespec="minutes"), "hasTime": show is not None,
-                        "name": e["name"], "kind": e.get("kind", "")})
-    return sorted(out, key=lambda x: x["at"])[:limit]
+        out.append(dict(e, kind=e.get("kind", ""), at=at, hasTime=bool(e.get("time"))))
+    return sorted(out, key=lambda x: x["at"])
+
+
+def upcoming(now, fomc, manual, days=40, limit=6):
+    """接下來 days 天內的事件。時間一過就移到「最近公布的結果」（events.py）。"""
+    return [{"at": e["at"].isoformat(timespec="minutes"), "hasTime": e["hasTime"], "name": e["name"], "kind": e["kind"]}
+            for e in timeline(fomc, manual) if now < e["at"] <= now + dt.timedelta(days=days)][:limit]
 
 
 # ---------------- 文字說明 ----------------
@@ -238,9 +242,9 @@ def _manual(problems):
         return []
 
 
-def update(now, tw_close, fetch_json=None):
+def update(now, tw_close, fetch_json=None, taiex=None, fetch_text=None):
     """抓最新資料，整理成網頁要用的數字，存到 data/meta/macro.json。回傳 (資料, 問題清單)。
-    tw_close：{日期: 台積電台股收盤}（算 ADR 溢價用）。"""
+    tw_close：{日期: 台積電台股收盤}（算 ADR 溢價用）；taiex：{日期: 加權指數漲跌 %}（事件後台股怎麼動）。"""
     fetch_json = fetch_json or (lambda u: get_json(u, retries=2))
     problems = []
     old = store.load_meta("macro", {}) or {}
@@ -279,7 +283,13 @@ def update(now, tw_close, fetch_json=None):
     manual = _manual(problems)
     if manual and max(e["date"] for e in manual) < (now.date() + dt.timedelta(days=60)).isoformat():
         print("  提醒：events.json 只登記到", max(e["date"] for e in manual), "，記得補上之後的 CPI、非農與央行日期")
-    m = {"tiles": tiles, "adr": [list(x) for x in adr], "events": upcoming(now, _fomc(now, problems), manual),
+    fomc = _fomc(now, problems)
+    try:  # 只是補充說明，出錯也不影響上面的行情
+        past = E.update(now, timeline(fomc, manual), raw, taiex or {}, fetch_text, problems)
+    except Exception as e:  # noqa: BLE001
+        problems.append(f"最近公布的結果：{e!r}")
+        past = old.get("past") or []
+    m = {"tiles": tiles, "adr": [list(x) for x in adr], "events": upcoming(now, fomc, manual), "past": past,
          "read": read(tiles, adr), "missing": [NAMES[k] for k in NAMES if k not in raw and k not in older]}
     strip = lambda x: {k: v for k, v in x.items() if k not in ("asOf", "_saved")}  # noqa: E731
     same = old.get("asOf") and json.dumps(strip(old), sort_keys=True) == json.dumps(strip(m), sort_keys=True)
