@@ -5,7 +5,7 @@
 
 結果從哪裡來：
 - Fed：聯準會的會後聲明（決策日美東時間下午 2 點公布）
-- CPI、非農：美國勞工統計局的官方數字，從聖路易聯準銀行的 FRED 資料庫下載（CSV，不用金鑰）
+- CPI、非農：美國勞工統計局的公開資料 API（不用金鑰；一次請求拿齊要的數列，未註冊每天限 25 次）
 - 台灣央行、選舉：沒有固定格式，手動寫在 events.json 的 result（一句話）
 - 市場反應：S&P 500、10 年債殖利率用 macro.py 已經抓的 Yahoo 走勢，台股用自己存的加權指數漲跌
 
@@ -14,17 +14,20 @@
 """
 import datetime as dt
 import html as htmllib
+import json
 import re
 from decimal import ROUND_HALF_UP, Decimal
 from zoneinfo import ZoneInfo
 
 from . import store
 from .checks import DataError
-from .net import FetchError, get_text
+from .net import FetchError, decode, fetch, get_text
 
 NY = ZoneInfo("America/New_York")
 FED_URL = "https://www.federalreserve.gov/newsevents/pressreleases/monetary{}a.htm"
-FRED_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={}"
+BLS_URL = "https://api.bls.gov/publicAPI/v1/timeseries/data/"
+# CPI：全部項目、扣掉食物和能源（都是未季調，年增率和官方公布的一樣）；非農：就業人數（千人，季調）、失業率（季調）
+SERIES = {"cpi": ("CUUR0000SA0", "CUUR0000SA0L1E"), "nfp": ("CES0000000001", "LNS14000000")}
 LATEST = ("fomc", "cpi", "nfp", "cbc")  # 每種留最近一次
 AUTO = ("fomc", "cpi", "nfp")           # 結果自動抓的種類
 ONE_OFF_DAYS = 30     # 其他（選舉）留幾天
@@ -144,22 +147,35 @@ def fed_text(r):
     return s + (f"（{note}）" if note else "")
 
 
-# ---------------- CPI、非農（FRED） ----------------
+# ---------------- CPI、非農（勞工統計局） ----------------
 
-def parse_fred(text):
-    """FRED 的 CSV（第一行是標題，缺值寫「.」）→ {"2026-09": 值}。"""
-    lines = [x.strip() for x in text.strip().splitlines() if x.strip()]
-    if not lines or not re.match(r"(?i)\w*date\s*,", lines[0]):
-        raise FetchError("FRED 回傳的不是 CSV（可能暫時被擋）")
+def post_json(url, payload):
+    raw = fetch(url, data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"}, retries=2)
+    try:
+        return json.loads(decode(raw))
+    except json.JSONDecodeError as e:
+        raise FetchError(f"回傳的不是 JSON（可能暫時被擋）：{url}") from e
+
+
+def parse_bls(j):
+    """勞工統計局 API 的回應 → {數列代號: {"2026-09": 值}}。M13 是全年平均，不要。"""
+    if not isinstance(j, dict) or "status" not in j:
+        raise DataError("勞工統計局 API 回傳的格式看不懂，可能改版")
+    if j["status"] != "REQUEST_SUCCEEDED":  # 例如超過每天的次數上限
+        raise FetchError(f"勞工統計局 API：{j['status']} {' '.join(j.get('message') or [])}".strip())
     out = {}
-    for ln in lines[1:]:
-        p = ln.split(",")
-        try:
-            out[p[0][:7]] = float(p[1])
-        except (IndexError, ValueError):
-            continue
-    if not out:
-        raise DataError("FRED 的 CSV 裡沒有數字，格式可能改了")
+    for x in (j.get("Results") or {}).get("series") or []:
+        vals = {}
+        for d in x.get("data") or []:
+            p = str(d.get("period", ""))
+            if re.fullmatch(r"M(0[1-9]|1[0-2])", p):
+                try:
+                    vals[f"{int(d['year']):04d}-{p[1:]}"] = float(d["value"])
+                except (KeyError, TypeError, ValueError):
+                    continue
+        out[x.get("seriesID")] = vals
+    if not any(out.values()):
+        raise DataError("勞工統計局 API 回傳的資料是空的，格式可能改了")
     return out
 
 
@@ -320,41 +336,57 @@ def _item(e, g, r, fresh):
     return it
 
 
-def update(now, timeline, series, taiex, fetch_text=None, problems=None):
+def _key(e):
+    return f"{group(e['kind'])}:{e['date']}"
+
+
+def update(now, timeline, series, taiex, fetch_text=None, problems=None, post=None):
     """回傳「最近公布的結果」（新到舊），順便把新抓到的存進 data/meta/event_results.json。
     series：macro.py 這次抓到的 Yahoo 走勢 {"spx": [...], "tnx": [...]}（沒抓到的就沒有）。"""
     fetch_text = fetch_text or (lambda u: get_text(u, retries=2))
+    post = post or post_json
     problems = problems if problems is not None else []
     saved = store.load_meta("event_results", {}) or {}
     rec = {k: dict(v) for k, v in saved.items()}
-    fred = {}
+    shown = pick(now, timeline)
 
-    def fred_series(sid):
-        if sid not in fred:
-            fred[sid] = parse_fred(fetch_text(FRED_URL.format(sid)))
-        return fred[sid]
+    def todo(e):  # 還要自動抓結果的
+        return (group(e["kind"]) in AUTO and not e.get("result") and not (rec.get(_key(e)) or {}).get("res")
+                and now - e["at"] <= dt.timedelta(days=RETRY_DAYS))
+
+    need = [e for e in shown if todo(e) and group(e["kind"]) in SERIES]
+    bls = None
+    if need:  # CPI、非農一次請求拿齊（API 每天有次數上限）
+        ids = sorted({s for e in need for s in SERIES[group(e["kind"])]})
+        years = [int(ref_month(e)[:4]) for e in need]
+        try:
+            bls = parse_bls(post(BLS_URL, {"seriesid": ids, "startyear": str(min(years) - 2), "endyear": str(max(years))}))
+        except FetchError as err:
+            print(f"  勞工統計局的數字還沒抓到：{err}")
+        except DataError as err:
+            problems.append(str(err))
 
     out = []
-    for e in pick(now, timeline):
-        g, key = group(e["kind"]), f"{group(e['kind'])}:{e['date']}"
+    for e in shown:
+        g, key = group(e["kind"]), _key(e)
         r = rec.get(key) or {}
         fresh = now - e["at"] <= dt.timedelta(days=RETRY_DAYS)
-        if fresh and g in AUTO and not r.get("res") and not e.get("result"):
-            try:
-                if g == "fomc":
+        if todo(e):
+            v = None
+            if g == "fomc":
+                try:
                     v = parse_fed(fetch_text(FED_URL.format(e["date"].replace("-", ""))))
-                elif g == "cpi":
-                    v = cpi_result(fred_series("CPIAUCNS"), fred_series("CPILFENS"), ref_month(e))
-                else:
-                    v = nfp_result(fred_series("PAYEMS"), fred_series("UNRATE"), ref_month(e))
-                if v:
-                    r["res"] = v
-                else:
-                    print(f"  {e['name']}：FRED 還沒有這個月的數字，下次再試")
-            except FetchError as err:
-                print(f"  {e['name']}的結果還沒抓到：{err}")
-            except DataError as err:
-                problems.append(f"{e['name']}：{err}")
+                except FetchError as err:
+                    print(f"  {e['name']}的結果還沒抓到：{err}")
+                except DataError as err:
+                    problems.append(f"{e['name']}：{err}")
+            elif bls is not None:
+                a, b = (bls.get(x) or {} for x in SERIES[g])
+                v = (cpi_result if g == "cpi" else nfp_result)(a, b, ref_month(e))
+                if not v:
+                    print(f"  {e['name']}：勞工統計局還沒有 {ref_month(e)} 的數字，下次再試")
+            if v:
+                r["res"] = v
         old = r.get("react") or {}
         if fresh and not old.get("done"):
             new = reaction(e, series.get("spx"), series.get("tnx"), taiex)

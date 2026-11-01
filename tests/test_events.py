@@ -1,4 +1,4 @@
-"""最近公布的結果：聯準會聲明、FRED 的 CPI 與非農、市場反應、每種留最近一次、存起來之後不重抓。"""
+"""最近公布的結果：聯準會聲明、勞工統計局的 CPI 與非農、市場反應、每種留最近一次、存起來之後不重抓。"""
 import datetime as dt
 import tempfile
 import unittest
@@ -33,15 +33,24 @@ percentage point at this meeting; and Austan D. Goolsbee and Jeffrey R. Schmid, 
 for the federal funds rate at this meeting.</p>"""
 
 
-def csv(sid, rows):
-    return "observation_date," + sid + "\n" + "\n".join(f"{d}-01,{v}" for d, v in rows) + "\n"
+def bls(series):
+    """勞工統計局 API 回應的樣子（新的月份在前，數字是字串）。"""
+    return {"status": "REQUEST_SUCCEEDED", "responseTime": 120, "message": [], "Results": {"series": [
+        {"seriesID": sid, "data": [{"year": ym[:4], "period": "M" + ym[5:] if len(ym) > 4 else "M13", "periodName": "",
+                                    "value": str(v), "footnotes": [{}]} for ym, v in reversed(rows)]}
+        for sid, rows in series.items()]}}
 
 
-NSA = [("2025-08", 100.0), ("2025-09", 100.0), ("2025-10", "."), ("2026-08", 103.4), ("2026-09", 103.7)]
+# 數字是編的，只是讓年增率剛好等於 9 月官方公布的 3.7%（8 月 3.4%）、核心 2.6%（2.4%）
+NSA = [("2025-08", 100.0), ("2025-09", 100.0), ("2025-10", "-"), ("2025", 100.0), ("2026-08", 103.4), ("2026-09", 103.7)]
 CORE = [("2025-08", 200.0), ("2025-09", 200.0), ("2026-08", 204.8), ("2026-09", 205.2)]
 PAY = [("2026-07", 159000), ("2026-08", 159133), ("2026-09", 159162)]
-UR = [("2026-08", 4.3), ("2026-09", 4.2)]
-FRED = {"CPIAUCNS": NSA, "CPILFENS": CORE, "PAYEMS": PAY, "UNRATE": UR}
+UR = [("2026-08", 4.1), ("2026-09", 4.2)]
+BLS = {"CUUR0000SA0": NSA, "CUUR0000SA0L1E": CORE, "CES0000000001": PAY, "LNS14000000": UR}
+
+
+def one(sid, rows):
+    return E.parse_bls(bls({sid: rows}))[sid]
 
 
 def ev(fomc=(), manual=()):
@@ -85,14 +94,16 @@ class Fed(unittest.TestCase):
             E.parse_fed("<p>The Committee will hold a press conference.</p>")
 
 
-class Fred(unittest.TestCase):
-    def test_csv(self):
-        s = E.parse_fred(csv("CPIAUCNS", NSA))
+class Bls(unittest.TestCase):
+    def test_parse(self):
+        s = E.parse_bls(bls({"CUUR0000SA0": NSA}))["CUUR0000SA0"]
         self.assertEqual(s["2026-09"], 103.7)
-        self.assertNotIn("2025-10", s)  # 缺值「.」跳過
-        self.assertEqual(E.parse_fred("DATE,UNRATE\n2026-09-01,4.2\n"), {"2026-09": 4.2})
-        with self.assertRaises(FetchError):
-            E.parse_fred("<!DOCTYPE html><html>Access denied</html>")
+        self.assertNotIn("2025-10", s)  # 缺值「-」跳過
+        self.assertEqual(len(s), 4)     # M13（全年平均）不要
+        with self.assertRaises(FetchError):  # 超過每天的次數上限：下次再試，不算改版
+            E.parse_bls({"status": "REQUEST_NOT_PROCESSED", "message": ["daily threshold"], "Results": {}})
+        with self.assertRaises(DataError):
+            E.parse_bls({"status": "REQUEST_SUCCEEDED", "Results": {"series": [{"seriesID": "X", "data": []}]}})
 
     def test_round_half_up(self):
         self.assertEqual((E._r1(3.65), E._r1(3.6499), E._r1(-0.05)), (3.7, 3.6, -0.1))
@@ -104,16 +115,16 @@ class Fred(unittest.TestCase):
         self.assertEqual(E.ref_month({"date": "2027-03-05", "name": "其他"}), "2027-02")
 
     def test_cpi(self):
-        r = E.cpi_result(E.parse_fred(csv("A", NSA)), E.parse_fred(csv("B", CORE)), "2026-09")
+        r = E.cpi_result(one("A", NSA), one("B", CORE), "2026-09")
         self.assertEqual((r["yoy"], r["prev"], r["core"], r["corePrev"]), (3.7, 3.4, 2.6, 2.4))
         self.assertEqual(E.cpi_text(r), "年增 3.7%（前月 3.4%），扣掉食物和能源的核心 2.6%（前月 2.4%）")
-        self.assertIsNone(E.cpi_result(E.parse_fred(csv("A", NSA)), E.parse_fred(csv("B", CORE)), "2026-10"))  # 還沒公布
+        self.assertIsNone(E.cpi_result(one("A", NSA), one("B", CORE), "2026-10"))  # 還沒公布
 
     def test_nfp(self):
-        r = E.nfp_result(E.parse_fred(csv("A", PAY)), E.parse_fred(csv("B", UR)), "2026-09")
-        self.assertEqual(E.nfp_text(r), "新增 2.9 萬人（前月 13.3 萬），失業率 4.2%（前月 4.3%）")
-        self.assertEqual(E.nfp_text(dict(r, chg=-10, prev=-5)), "減少 1.0 萬人（前月 −0.5 萬），失業率 4.2%（前月 4.3%）")
-        self.assertIsNone(E.nfp_result(E.parse_fred(csv("A", PAY)), E.parse_fred(csv("B", UR)), "2026-10"))
+        r = E.nfp_result(one("A", PAY), one("B", UR), "2026-09")
+        self.assertEqual(E.nfp_text(r), "新增 2.9 萬人（前月 13.3 萬），失業率 4.2%（前月 4.1%）")
+        self.assertEqual(E.nfp_text(dict(r, chg=-10, prev=-5)), "減少 1.0 萬人（前月 −0.5 萬），失業率 4.2%（前月 4.1%）")
+        self.assertIsNone(E.nfp_result(one("A", PAY), one("B", UR), "2026-10"))
 
 
 class Reaction(unittest.TestCase):
@@ -180,13 +191,15 @@ class Update(unittest.TestCase):
         self.calls.append(url)
         if "monetary20261028a" in url:
             return HOLD
-        for sid, rows in FRED.items():
-            if url.endswith("id=" + sid):
-                return csv(sid, rows)
         raise FetchError("404 " + url)
 
-    def run_once(self, fetch=None, problems=None):
-        return E.update(self.now, self.tl, {"spx": SPX, "tnx": TNX}, TAIEX, fetch or self.web, problems)
+    def api(self, url, payload):
+        self.calls.append(url)
+        self.payload = payload
+        return bls({k: v for k, v in BLS.items() if k in payload["seriesid"]})
+
+    def run_once(self, fetch=None, problems=None, post=None):
+        return E.update(self.now, self.tl, {"spx": SPX, "tnx": TNX}, TAIEX, fetch or self.web, problems, post or self.api)
 
     def test_results_and_cache(self):
         out = self.run_once()
@@ -197,37 +210,46 @@ class Update(unittest.TestCase):
         self.assertEqual(fomc["at"], "2026-10-29T02:00+08:00")
         self.assertEqual(cpi["result"], "年增 3.7%（前月 3.4%），扣掉食物和能源的核心 2.6%（前月 2.4%）")
         self.assertEqual(cpi["react"], "當晚美股 S&P 500 −1.50%；台股 10/15 −3.41%")
-        self.assertEqual(nfp["result"], "新增 2.9 萬人（前月 13.3 萬），失業率 4.2%（前月 4.3%）")
+        self.assertEqual(nfp["result"], "新增 2.9 萬人（前月 13.3 萬），失業率 4.2%（前月 4.1%）")
         self.assertEqual(cbc, {"at": "2026-09-17T23:59+08:00", "hasTime": False, "name": "台灣央行理監事會", "kind": "cbc",
                                "result": "利率不變（重貼現率 2%）", "react": "台股 9/18 +1.93%"})
-        self.assertEqual(len(self.calls), 5)  # 聲明 1 次、FRED 4 個數列
+        self.assertEqual(len(self.calls), 2)  # 聲明 1 次；CPI、非農的 4 個數列一次請求拿齊
+        self.assertEqual(self.payload, {"seriesid": ["CES0000000001", "CUUR0000SA0", "CUUR0000SA0L1E", "LNS14000000"],
+                                        "startyear": "2024", "endyear": "2026"})
         saved = store.load_meta("event_results")
         self.assertTrue(all(v["react"]["done"] for v in saved.values()))
-        again = E.update(self.now + dt.timedelta(days=1), self.tl, {}, {}, self.web)  # 這次 Yahoo、台股都沒資料
+        again = E.update(self.now + dt.timedelta(days=1), self.tl, {}, {}, self.web, None, self.api)  # 這次 Yahoo、台股都沒資料
         self.assertEqual(again, out)  # 存起來的結果和反應照用
-        self.assertEqual(len(self.calls), 5)  # 不再重抓
+        self.assertEqual(len(self.calls), 2)  # 不再重抓
 
     def test_not_yet(self):
-        def down(url):
+        def down(url, payload=None):
             raise FetchError("timeout")
-        out = self.run_once(down)
-        self.assertEqual(out[0]["pending"], "結果還沒抓到，下次更新會再試。")
+        out = self.run_once(down, post=down)
+        self.assertEqual([x.get("pending") for x in out[:3]], ["結果還沒抓到，下次更新會再試。"] * 3)
         self.assertNotIn("res", store.load_meta("event_results")["fomc:2026-10-28"])
         out = self.run_once()  # 下次抓到了
-        self.assertIn("result", out[0])
+        self.assertTrue(all("result" in x for x in out))
+
+    def test_month_not_out_yet(self):
+        """公布時間過了，但 API 還沒有那個月的數字：先顯示還沒抓到，只問一次。"""
+        early = {k: v[:-1] for k, v in BLS.items()}
+        out = self.run_once(post=lambda u, p: bls(early))
+        self.assertEqual(out[1]["pending"], "結果還沒抓到，下次更新會再試。")
 
     def test_changed_page(self):
         problems = []
-        self.run_once(lambda u: "<p>改版了</p>" if "federalreserve" in u else self.web(u), problems)
-        self.assertEqual(len(problems), 1)
-        self.assertIn("Fed 利率決策", problems[0])
+        self.run_once(lambda u: "<p>改版了</p>", problems, lambda u, p: {"status": "REQUEST_SUCCEEDED", "Results": {}})
+        self.assertEqual(len(problems), 2)
+        self.assertTrue(any("Fed 利率決策" in x for x in problems))
+        self.assertTrue(any("勞工統計局" in x for x in problems))
 
     def test_partial_reaction_kept(self):
         """第一次只有台股，第二次 Yahoo 才有美股：兩次的合起來，齊了才不再算。"""
-        E.update(self.now, self.tl, {}, TAIEX, self.web)
+        E.update(self.now, self.tl, {}, TAIEX, self.web, None, self.api)
         r = store.load_meta("event_results")["fomc:2026-10-28"]["react"]
         self.assertEqual(r, {"tw": "2026-10-29", "taiex": -1.42})
-        E.update(self.now, self.tl, {"spx": SPX, "tnx": TNX}, {}, self.web)
+        E.update(self.now, self.tl, {"spx": SPX, "tnx": TNX}, {}, self.web, None, self.api)
         r = store.load_meta("event_results")["fomc:2026-10-28"]["react"]
         self.assertEqual(r, {"tw": "2026-10-29", "taiex": -1.42, "us": "2026-10-28", "spx": 0.28, "tnx": 0.052, "done": True})
 

@@ -138,12 +138,12 @@ class Update(unittest.TestCase):
                 return chart(v)
         raise FetchError("404")
 
-    def nonet(self, url):  # 事件結果（聯準會、FRED）在測試裡不連網
+    def nonet(self, url, payload=None):  # 事件結果（聯準會、勞工統計局）在測試裡不連網
         raise FetchError("測試不連網")
 
     def test_update(self):
         now = dt.datetime(2026, 10, 25, 22, 0, tzinfo=TPE)
-        m, problems = M.update(now, {"2026-10-22": 1465.0, "2026-10-21": 1480.0}, fetch_json=self.fetch, fetch_text=self.nonet)
+        m, problems = M.update(now, {"2026-10-22": 1465.0, "2026-10-21": 1480.0}, fetch_json=self.fetch, fetch_text=self.nonet, post_json=self.nonet)
         self.assertEqual(len(problems), 1)  # VIX 拿到費半的數字，超出合理範圍
         self.assertIn("VIX", problems[0])
         self.assertIn("那斯達克", m["missing"])
@@ -154,16 +154,16 @@ class Update(unittest.TestCase):
         self.assertTrue(m["past"][2]["result"])  # 台灣央行的結果是 events.json 手寫的
         self.assertEqual(m["past"][0]["pending"], "結果還沒抓到，下次更新會再試。")
         later = now + dt.timedelta(hours=10)
-        m2, _ = M.update(later, {"2026-10-22": 1465.0, "2026-10-21": 1480.0}, fetch_json=self.fetch, fetch_text=self.nonet)
+        m2, _ = M.update(later, {"2026-10-22": 1465.0, "2026-10-21": 1480.0}, fetch_json=self.fetch, fetch_text=self.nonet, post_json=self.nonet)
         self.assertEqual(m2["asOf"], m["asOf"])  # 數字沒變，時間也不變（網頁不會多一次更新）
 
     def test_keeps_old_values(self):
         now = dt.datetime(2026, 10, 25, 22, 0, tzinfo=TPE)
-        M.update(now, {}, fetch_json=self.fetch, fetch_text=self.nonet)
+        M.update(now, {}, fetch_json=self.fetch, fetch_text=self.nonet, post_json=self.nonet)
 
         def down(url):
             raise FetchError("timeout")
-        m, problems = M.update(now + dt.timedelta(days=1), {}, fetch_json=down, fetch_text=self.nonet)
+        m, problems = M.update(now + dt.timedelta(days=1), {}, fetch_json=down, fetch_text=self.nonet, post_json=self.nonet)
         self.assertEqual(problems, [])
         self.assertTrue(m["tiles"]["sox"]["stale"])
 
@@ -171,7 +171,7 @@ class Update(unittest.TestCase):
         """Yahoo 有時回傳少了最後一天的資料：不能拿比較舊的蓋掉已經有的，ADR 溢價也要沿用。"""
         now = dt.datetime(2026, 10, 25, 22, 0, tzinfo=TPE)
         closes = {"2026-10-22": 1465.0, "2026-10-21": 1480.0}
-        m1, _ = M.update(now, closes, fetch_json=self.fetch, fetch_text=self.nonet)
+        m1, _ = M.update(now, closes, fetch_json=self.fetch, fetch_text=self.nonet, post_json=self.nonet)
 
         def short(url):
             j = self.fetch(url)
@@ -183,7 +183,7 @@ class Update(unittest.TestCase):
                 for k in q:
                     q[k] = q[k][:-1]
             return j
-        m2, problems = M.update(now + dt.timedelta(hours=1), closes, fetch_json=short, fetch_text=self.nonet)
+        m2, problems = M.update(now + dt.timedelta(hours=1), closes, fetch_json=short, fetch_text=self.nonet, post_json=self.nonet)
         self.assertFalse([p for p in problems if "ADR" in p])  # 只剩測試資料故意放錯的 VIX
         self.assertEqual(m2["tiles"]["tsm"], m1["tiles"]["tsm"])
         self.assertNotIn("stale", m2["tiles"]["tsm"])

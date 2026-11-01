@@ -242,7 +242,7 @@ def _manual(problems):
         return []
 
 
-def update(now, tw_close, fetch_json=None, taiex=None, fetch_text=None):
+def update(now, tw_close, fetch_json=None, taiex=None, fetch_text=None, post_json=None):
     """抓最新資料，整理成網頁要用的數字，存到 data/meta/macro.json。回傳 (資料, 問題清單)。
     tw_close：{日期: 台積電台股收盤}（算 ADR 溢價用）；taiex：{日期: 加權指數漲跌 %}（事件後台股怎麼動）。"""
     fetch_json = fetch_json or (lambda u: get_json(u, retries=2))
@@ -285,7 +285,7 @@ def update(now, tw_close, fetch_json=None, taiex=None, fetch_text=None):
         print("  提醒：events.json 只登記到", max(e["date"] for e in manual), "，記得補上之後的 CPI、非農與央行日期")
     fomc = _fomc(now, problems)
     try:  # 只是補充說明，出錯也不影響上面的行情
-        past = E.update(now, timeline(fomc, manual), raw, taiex or {}, fetch_text, problems)
+        past = E.update(now, timeline(fomc, manual), raw, taiex or {}, fetch_text, problems, post_json)
     except Exception as e:  # noqa: BLE001
         problems.append(f"最近公布的結果：{e!r}")
         past = old.get("past") or []
