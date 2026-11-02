@@ -1,0 +1,21 @@
+name: 櫃買法人舊格式探測（暫時，用完就刪）
+on:
+  push:
+    branches: [backtest]
+    paths: [bt/probe11.py]
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 探測
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          python bt/probe11.py

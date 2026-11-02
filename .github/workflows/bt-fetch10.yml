@@ -1,0 +1,25 @@
+name: 十年回測資料下載（暫時，用完就刪）
+on:
+  push:
+    branches: [backtest]
+    paths: [bt/ranges10.txt]
+permissions:
+  contents: write
+jobs:
+  fetch:
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 下載
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          python bt/fetch10.py $(sed -n "${{ matrix.part }}p" bt/ranges10.txt)
