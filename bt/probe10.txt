@@ -1,0 +1,60 @@
+2013-06-14 | twse_inst=OK | twse_quotes=OK | tpex_inst=EMPTY | tpex_quotes=OK | tpex_index=OK | twse_flows=OK | twse_margin=OK | tpex_margin=OK | twse_dt=EMPTY | tpex_dt=EMPTY
+   筆數 q=1461 inst=746 margin=1332 dt=0 指數=['加權指數', '生技', '半導體', '航運'] market=['marginAmt', 'marginAmtPrev', 'value']
+   2330 q=['台積電', '上市', 106, 1.5, 105, 106, 104.5, 41207256, 4344673136, 0] inst=[3556816, 593000, -3849000, -292184] margin=[18006, -98, 2109, -37] dt=None
+   上櫃樣本 5347 q=['世界', '上櫃', 34.5, None, 34.65, 34.7, 33.85, 5427000, 186258450, 0] inst=None 加權={'close': 7937.74, 'chg': -13.92, 'chgPct': -0.18} 櫃買={'close': 117.0, 'chg': -0.89, 'chgPct': -0.75}
+2014-01-06 | twse_inst=OK | twse_quotes=OK | tpex_inst=EMPTY | tpex_quotes=OK | tpex_index=OK | twse_flows=OK | twse_margin=OK | tpex_margin=OK | twse_dt=OK | tpex_dt=OK
+   筆數 q=1501 inst=804 margin=1368 dt=200 指數=['加權指數', '生技', '半導體', '航運'] market=['marginAmt', 'marginAmtPrev', 'value']
+   2330 q=['台積電', '上市', 102.5, 0, 102, 103, 102, 23729719, 2432745661, 0] inst=[-13192675, 22000, 79000, -13113675] margin=[24389, 399, 2837, -31] dt=[89000, 0]
+   上櫃樣本 5347 q=['世界', '上櫃', 35.4, None, 36.2, 36.55, 35.4, 2642000, 94909650, 0] inst=None 加權={'close': 8500.01, 'chg': -46.53, 'chgPct': -0.54} 櫃買={'close': 130.28, 'chg': -0.76, 'chgPct': -0.58}
+2014-06-17 | twse_inst=OK | twse_quotes=OK | tpex_inst=EMPTY | tpex_quotes=OK | tpex_index=OK | twse_flows=OK | twse_margin=OK | tpex_margin=OK | twse_dt=OK | tpex_dt=OK
+   筆數 q=1516 inst=818 margin=1393 dt=197 指數=['加權指數', '生技', '半導體', '航運'] market=['marginAmt', 'marginAmtPrev', 'value']
+   2330 q=['台積電', '上市', 125, 1, 124, 125, 123, 20568681, 2557854737, 0] inst=[6217897, -431000, 1272000, 7489897] margin=[12827, -205, 2112, 110] dt=[837000, 0]
+   上櫃樣本 5347 q=['世界', '上櫃', 45.85, None, 46.6, 46.6, 45.8, 4187000, 192470750, 0] inst=None 加權={'close': 9240.6, 'chg': 37.67, 'chgPct': 0.41} 櫃買={'close': 153.01, 'chg': 0.37, 'chgPct': 0.24}
+2015-06-01 | twse_inst=OK | twse_quotes=OK | tpex_inst=ERR KeyError: 'data' | tpex_quotes=OK | tpex_index=OK | twse_flows=OK | twse_margin=OK | tpex_margin=OK | twse_dt=OK | tpex_dt=OK
+   筆數 q=1559 inst=815 margin=1435 dt=398 指數=['加權指數', '生技', '半導體', '航運'] market=['marginAmt', 'marginAmtPrev', 'value']
+   2330 q=['台積電', '上市', 145, -1, 145.5, 146, 144, 31646861, 4585709246, 0] inst=[-17285800, -81000, -128000, -17413800] margin=[32734, 140, 1427, -196] dt=[994000, 0]
+   上櫃樣本 5347 q=['世界', '上櫃', 50, 0, 50.2, 50.2, 49.85, 5304000, 265198650, 0] inst=None 加權={'close': 9625.69, 'chg': -75.38, 'chgPct': -0.78} 櫃買={'close': 144.19, 'chg': 0.29, 'chgPct': 0.2}
+2016-06-15 | twse_inst=OK | twse_quotes=OK | tpex_inst=ERR KeyError: 'data' | tpex_quotes=OK | tpex_index=OK | twse_flows=OK | twse_margin=OK | tpex_margin=OK | twse_dt=OK | tpex_dt=OK
+   筆數 q=1603 inst=842 margin=1467 dt=1331 指數=['加權指數', '生技', '半導體', '航運'] market=['marginAmt', 'marginAmtPrev', 'value']
+   2330 q=['台積電', '上市', 163, 1, 162, 163, 161, 29328888, 4763332856, 0] inst=[5166111, 14000, 1996000, 7162111] margin=[11007, -299, 2877, -53] dt=[716000, 0]
+   上櫃樣本 5347 q=['世界', '上櫃', 54.1, None, 54.2, 54.3, 53.3, 2365000, 127102700, 0] inst=None 加權={'close': 8606.37, 'chg': 30.25, 'chgPct': 0.35} 櫃買={'close': 127.22, 'chg': 0.59, 'chgPct': 0.47}
+2017-09-12 | twse_inst=OK | twse_quotes=OK | tpex_inst=ERR KeyError: 'data' | tpex_quotes=OK | tpex_index=OK | twse_flows=OK | twse_margin=OK | tpex_margin=OK | twse_dt=OK | tpex_dt=OK
+   筆數 q=1637 inst=790 margin=1506 dt=1371 指數=['加權指數', '生技', '半導體', '航運'] market=['marginAmt', 'marginAmtPrev', 'value']
+   2330 q=['台積電', '上市', 219, 2, 219, 219.5, 217.5, 24862321, 5437521978, 0] inst=[8312845, 328000, -192000, 8120845] margin=[9074, -700, 1644, 40] dt=[1662000, 0]
+   上櫃樣本 5347 q=['世界', '上櫃', 54.9, 0.3, 54.9, 55, 54.6, 1230000, 67488600, 0] inst=None 加權={'close': 10610.35, 'chg': 38.19, 'chgPct': 0.36} 櫃買={'close': 141.81, 'chg': 0.35, 'chgPct': 0.25}
+2018-10-11 | twse_inst=OK | twse_quotes=OK | tpex_inst=OK | tpex_quotes=OK | tpex_index=OK | twse_flows=OK | twse_margin=OK | tpex_margin=OK | twse_dt=OK | tpex_dt=OK
+   筆數 q=1675 inst=1408 margin=1532 dt=1393 指數=['加權指數', '生技', '半導體', '航運'] market=['marginAmt', 'marginAmtPrev', 'value']
+   2330 q=['台積電', '上市', 227.5, -16.5, 233.5, 233.5, 227, 96033657, 22115862239, 0] inst=[-37208167, -624915, -446000, -38279082] margin=[14704, 565, 2705, -137] dt=[12550000, 0]
+   上櫃樣本 5347 q=['世界', '上櫃', 54, -6, 55, 55.2, 54, 5531000, 300365200, 0] inst=[-905130, -1174000, -8000, -2087130] 加權={'close': 9806.11, 'chg': -660.72, 'chgPct': -6.31} 櫃買={'close': 114.01, 'chg': -9.16, 'chgPct': -7.44}
+2019-08-14 | twse_inst=OK | twse_quotes=OK | tpex_inst=OK | tpex_quotes=OK | tpex_index=OK | twse_flows=OK | twse_margin=OK | tpex_margin=OK | twse_dt=OK | tpex_dt=OK
+   筆數 q=1709 inst=1343 margin=1569 dt=1424 指數=['加權指數', '生技', '電子', '半導體'] market=['marginAmt', 'marginAmtPrev', 'value']
+   2330 q=['台積電', '上市', 249.5, 3, 252.5, 254, 249.5, 36336703, 9142333535, 0] inst=[-4057634, 304000, 171000, -3582634] margin=[12534, 1588, 1239, -16] dt=[4643000, 0]
+   上櫃樣本 5347 q=['世界', '上櫃', 61.5, 0.5, 61.7, 62.4, 61.5, 1752000, 108465900, 0] inst=[-268000, 0, 13000, -255000] 加權={'close': 10427.73, 'chg': 65.07, 'chgPct': 0.63} 櫃買={'close': 136.66, 'chg': 0.3, 'chgPct': 0.22}
+2020-03-19 | twse_inst=OK | twse_quotes=OK | tpex_inst=OK | tpex_quotes=OK | tpex_index=OK | twse_flows=OK | twse_margin=OK | tpex_margin=OK | twse_dt=OK | tpex_dt=OK
+   筆數 q=1722 inst=1540 margin=1579 dt=1413 指數=['加權指數', '生技', '電子', '半導體'] market=['marginAmt', 'marginAmtPrev', 'value']
+   2330 q=['台積電', '上市', 248, 0, 252, 253, 235.5, 160811697, 39559889553, 1] inst=[-28656927, 1413942, -4529000, -31771985] margin=[30650, -1330, 1529, 1529] dt=[39512000, 1]
+   上櫃樣本 5347 q=['世界', '上櫃', 57.6, -6.4, 61, 61.1, 57.6, 9735000, 572355000, 0] inst=[-4119629, -45000, 482000, -3682629] 加權={'close': 8681.34, 'chg': -537.33, 'chgPct': -5.83} 櫃買={'close': 103.25, 'chg': -8.41, 'chgPct': -7.53}
+2021-05-12 | twse_inst=OK | twse_quotes=OK | tpex_inst=OK | tpex_quotes=OK | tpex_index=OK | twse_flows=OK | twse_margin=OK | tpex_margin=OK | twse_dt=OK | tpex_dt=OK
+   筆數 q=1740 inst=1629 margin=1597 dt=1466 指數=['加權指數', '生技', '電子', '半導體'] market=['marginAmt', 'marginAmtPrev', 'value']
+   2330 q=['台積電', '上市', 560, -11, 567, 571, 518, 138328672, 76325765887, 0] inst=[-7776719, 1809346, 677936, -5289437] margin=[36349, -670, 157, 86] dt=[52280000, 0]
+   上櫃樣本 5347 q=['世界', '上櫃', 101.5, -8, 107.5, 109, 98.6, 8976000, 928755400, 0] inst=[253507, 540650, -119003, 675154] 加權={'close': 15902.37, 'chg': -680.76, 'chgPct': -4.11} 櫃買={'close': 185.15, 'chg': -7.89, 'chgPct': -4.09}
+2022-06-15 | twse_inst=OK | twse_quotes=OK | tpex_inst=OK | tpex_quotes=OK | tpex_index=OK | twse_flows=OK | twse_margin=OK | tpex_margin=OK | twse_dt=OK | tpex_dt=OK
+   筆數 q=1767 inst=1594 margin=1624 dt=1509 指數=['加權指數', '生技', '電子', '半導體'] market=['marginAmt', 'marginAmtPrev', 'value']
+   2330 q=['台積電', '上市', 509, -4, 508, 515, 508, 38360508, 19580150319, 0] inst=[-13779492, 246338, -374031, -13907185] margin=[35189, 137, 0, 0] dt=[4494000, 1]
+   上櫃樣本 5347 q=['世界', '上櫃', 95.5, -1, 95.9, 97.4, 95, 4361000, 418095000, 0] inst=[-210652, -56000, 470520, 203868] 加權={'close': 15999.25, 'chg': -48.12, 'chgPct': -0.3} 櫃買={'close': 198.63, 'chg': -0.62, 'chgPct': -0.31}
+2023-03-15 | twse_inst=OK | twse_quotes=OK | tpex_inst=OK | tpex_quotes=OK | tpex_index=OK | twse_flows=OK | twse_margin=OK | tpex_margin=OK | twse_dt=OK | tpex_dt=OK
+   筆數 q=1783 inst=1615 margin=1644 dt=1525 指數=['加權指數', '生技', '電子', '半導體'] market=['marginAmt', 'marginAmtPrev', 'value']
+   2330 q=['台積電', '上市', 511, 1, 515, 516, 510, 24080361, 12350942139, 0] inst=[-2122661, 285143, -1430360, -3267878] margin=[19672, 280, 0, 0] dt=[2394000, 1]
+   上櫃樣本 5347 q=['世界', '上櫃', 91.5, 0.5, 92.2, 93.1, 91.5, 2264000, 208981100, 0] inst=[537707, -4000, -39148, 494559] 加權={'close': 15387.59, 'chg': 27.17, 'chgPct': 0.18} 櫃買={'close': 205.07, 'chg': 1.46, 'chgPct': 0.72}
+2024-06-28 | twse_inst=OK | twse_quotes=OK | tpex_inst=OK | tpex_quotes=OK | tpex_index=OK | twse_flows=OK | twse_margin=OK | tpex_margin=OK | twse_dt=OK | tpex_dt=OK
+   筆數 q=1842 inst=1756 margin=1692 dt=1559 指數=['加權指數', '生技', '電子', '半導體'] market=['marginAmt', 'marginAmtPrev', 'value']
+   2330 q=['台積電', '上市', 966, 6, 956, 971, 955, 42998776, 41476565443, 0] inst=[423010, 57500, 1146261, 1626771] margin=[24540, 78, 376, 50] dt=[7081000, 0]
+   上櫃樣本 5347 q=['世界', '上櫃', 129.5, 11.5, 119, 129.5, 117.5, 33128000, 4187626500, 0] inst=[-5382524, 13927000, 236442, 8780918] 加權={'close': 23032.25, 'chg': 126.27, 'chgPct': 0.55} 櫃買={'close': 273.35, 'chg': 3.89, 'chgPct': 1.44}
+月營收 2012-01 sii https://mopsov.twse.com.tw: 335964 bytes, <tr 947 個
+月營收 2012-01 otc https://mopsov.twse.com.tw: 274466 bytes, <tr 775 個
+月營收 2013-01 sii https://mopsov.twse.com.tw: 336645 bytes, <tr 1012 個
+月營收 2013-01 otc https://mopsov.twse.com.tw: 258493 bytes, <tr 783 個
+月營收 2016-06 sii https://mopsov.twse.com.tw: 392401 bytes, <tr 1025 個
+月營收 2016-06 otc https://mopsov.twse.com.tw: 322044 bytes, <tr 841 個
+月營收 2020-03 sii https://mopsov.twse.com.tw: 413010 bytes, <tr 1072 個
+月營收 2020-03 otc https://mopsov.twse.com.tw: 349114 bytes, <tr 904 個
