@@ -1107,7 +1107,7 @@ footer a{color:var(--ink-2)}
   }
 
   // 小帳戶參考：資金分成 K 份、最多抱 K 檔，有空位才從當天名單（上市、上櫃合起來照分數排）依序補；賣出照參考規則。
-  // 回測數字在 D.exits.rule.slots（2026-10-31 的帳戶模擬）。K 只存在這台裝置的瀏覽器
+  // 回測數字在 D.exits.rule.slots（2026-11-02 的 12 年帳戶模擬）。K 只存在這台裝置的瀏覽器
   var SLOT_OPTS = [3, 5, 10];
   function slotInfo() { return ((D.exits || {}).rule || {}).slots || null; }
   function slotK() {
@@ -1120,10 +1120,18 @@ footer a{color:var(--ink-2)}
   function slotsText(k) {
     var S = slotInfo(), o = S && S.k && S.k[String(k)];
     if (!o) return "";
-    return "回測（" + S.period + "）：最多抱 " + k + " 檔、每天有空位就補，年化 " + fmt(o.daily[0], 1) + "%、最大回檔 " + pct(o.daily[1], 1) + "；只在週一買是年化 " +
-      fmt(o.weekly[0], 1) + "%、最大回檔 " + pct(o.weekly[1], 1) + "。同樣的規則改成從名單隨機挑股票、跑 200 次，年化落在 " + fmt(o.rand[0], 0) + "%～" + fmt(o.rand[2], 0) +
-      "%（中位數 " + fmt(o.rand[1], 0) + "%），有 " + o.lose + "% 輸給加權指數，所以檔數越少越看運氣。同期加權指數年化 " + fmt(S.taiex.cagr, 1) + "%（不含股息）、最大回檔 " +
-      pct(S.taiex.mdd, 1) + "：名單贏的是一般股票，不一定贏大盤，而且回檔比較深。";
+    // 年化可能是負的：整數四捨五入後再加正負號
+    function n0(v) { var r = Math.round(v); return (r < 0 ? "−" : "") + fmt(Math.abs(r), 0) + "%"; }
+    // 最大回檔從哪個月的高點跌到哪個月；back 是回到高點的月份（null＝回測結束還沒回到）
+    function when(peak, low, back) {
+      return peak && low ? "，" + peak + " 的高點跌到 " + low + (back ? "、" + back + " 才回到高點" : "，到回測結束還沒回到高點") : "";
+    }
+    var t = S.taiex, td = t.dd || [];
+    return "回測" + (S.years ? " " + S.years + " 年" : "") + "（" + S.period + "）：最多抱 " + k + " 檔、每天有空位就補，年化 " + fmt(o.daily[0], 1) + "%、最大回檔 " +
+      pct(o.daily[1], 1) + when(o.daily[2], o.daily[3], o.daily[4]) + "；只在週一買是年化 " + fmt(o.weekly[0], 1) + "%、最大回檔 " + pct(o.weekly[1], 1) +
+      "。同樣的規則改成從名單隨機挑股票、跑 200 次，年化落在 " + n0(o.rand[0]) + "～" + n0(o.rand[2]) + "（中位數 " + n0(o.rand[1]) + "），有 " + o.lose +
+      "% 輸給加權指數，所以檔數越少越看運氣。同期加權指數年化 " + fmt(t.cagr, 1) + "%（不含股息）、最大回檔 " + pct(t.mdd, 1) + when(td[0], td[1], td[2]) +
+      "。" + (S.years ? S.years + " 年下來，只抱名單股的做法大多沒有贏加權：" : "") + "名單股平均比一般股票好一點，但只抱幾檔又常換股，帳戶不一定贏大盤，而且回檔深很多。";
   }
   function slotBox(st) {
     var S = slotInfo(), all = combined();
@@ -1480,9 +1488,11 @@ footer a{color:var(--ink-2)}
     if (sold.length) box.appendChild(h("details", null, h("summary", null, "最近照規則賣掉的 " + sold.length + " 檔"),
       rows(sold, ["賣出", function (x) { return md(x.exit) + (x.why === "max" ? "（抱滿）" : ""); }])));
     if (!items.length) box.appendChild(h("p", { class: "fine" }, "之前名單的股票照規則的狀態，會從下一個交易日開始顯示在這裡。"));
-    if (bt.per20 != null) box.appendChild(h("p", { class: "fine" }, "回測（" + R.backtest.period + "，" + fmt(R.backtest.trades) + " 筆）：平均抱 " + fmt(bt.hold, 0) +
-      " 天，換算每 20 個交易日淨賺 " + fmt(bt.per20, 1) + "%（固定抱 20 天是 " + fmt(b20.per20, 1) + "%）；勝率 " + bt.win + "%（固定抱 20 天 " + b20.win +
-      "%）。換股比較頻繁，小額或零股交易時手續費最低收費會讓成本比回測的 0.4% 高。"));
+    var yrs = R.backtest && R.backtest.years, rc = R.backtest && R.backtest.recent;
+    if (bt.per20 != null) box.appendChild(h("p", { class: "fine" }, "回測" + (yrs ? " " + yrs + " 年" : "") + "（" + R.backtest.period + "，" + fmt(R.backtest.trades) + " 筆）：平均抱 " + fmt(bt.hold, 0) +
+      " 天，換算每 20 個交易日淨賺 " + fmt(bt.per20, 1) + "%（固定抱 20 天是 " + fmt(b20.per20, 1) + "%）；勝率 " + bt.win + "%（固定抱 20 天 " + b20.win + "%）。" +
+      (rc ? "最近兩年（" + rc.period + "）是 " + fmt(rc.per20, 1) + "%，剛好是" + (yrs ? "這 " + yrs + " 年裡" : "") + "最好的一段，不能當成常態。" : "") +
+      "換股比較頻繁，小額或零股交易時手續費最低收費會讓成本比回測的 0.4% 高。"));
     return box;
   }
 
@@ -1524,7 +1534,7 @@ footer a{color:var(--ink-2)}
     }).filter(Boolean);
     if (!lines.length) return null;
     return h("div", { class: "regime" }, h("h3", null, "盤勢提醒"), h("ul", null, lines),
-      h("p", null, "這是名單跟同市場股票比的相對差距，不是買點訊號：站上季線比例高的時候，整個大盤之後反而常常回檔。依 " + B.period + " 回測：" + B.note + "。"));
+      h("p", null, "這是名單跟同市場股票比的相對差距，不是買點訊號：站上季線比例高的時候，整個大盤之後反而常常回檔。依 " + B.period + (B.years ? "（" + B.years + " 年）" : " ") + "回測：" + B.note + "。"));
   }
 
   function pickRow(p, animateRow, pos) {
@@ -1600,8 +1610,11 @@ footer a{color:var(--ink-2)}
       if (R.lists) panel.appendChild(h("p", { class: "mnote" }, "名單滿 5 個交易日後，這裡開始顯示成績。"));
       return panel;
     }
+    // 回測參考：主要是 12 年的數字，最近兩年（比較好的一段）附在後面，才不會只拿最好的兩年當標準
+    var rc = (B && B.recent && B.recent.overall) || null;
+    function refs(o, k) { return MK.map(function (mk) { return o[mk] ? mk + " " + pct(o[mk]["d" + k]) : null; }).filter(Boolean).join("、"); }
     function block(k, rows) {
-      var label = k + " 日平均超額", ref = MK.map(function (mk) { return bt[mk] ? mk + " " + pct(bt[mk]["d" + k]) : null; }).filter(Boolean).join("、");
+      var label = k + " 日平均超額", ref = (B && B.years ? B.years + " 年 " : "") + refs(bt, k) + (rc ? "；近兩年 " + refs(rc, k) : "");
       if (!rows.length) return h("div", null, label, h("span", { class: "num" }, "累積中"), h("span", { class: "vs" }, "名單滿 " + k + " 個交易日後開始計算。回測：" + ref + "。"));
       var m = mean(rows.map(function (x) { return x["ex" + k]; })), mk = R.market || {};
       var per = MK.map(function (x) { var v = (mk[x] || {})["ex" + k]; return v == null ? null : x + " " + pct(v); }).filter(Boolean).join("、");
@@ -1639,8 +1652,9 @@ footer a{color:var(--ink-2)}
         if (s.avg5 != null && t != null) { e.push(t); if (s.avg5 > t) ewin++; }
       });
       var etfTxt = e.length ? "同期 0050 " + pct(mean(e)) + "，贏 0050 的有 " + ewin + " 份" + (e.length < a.length ? "（" + e.length + " 份有 0050 資料）" : "") + "。" : "";
-      var bt = B && B.overall && B.overall[mk];
-      var ref = bt ? "回測（" + B.period + "）平均 5 日比同市場" + rel(bt.d5) + "、20 日" + rel(bt.d20) + "。" : "";
+      var bt = B && B.overall && B.overall[mk], rc = B && B.recent && B.recent.overall && B.recent.overall[mk];
+      var ref = bt ? "回測（" + B.period + "）平均 5 日比同市場" + rel(bt.d5) + "、20 日" + rel(bt.d20) +
+        (rc ? "；最近兩年（" + B.recent.period + "）5 日" + rel(rc.d5) + "、20 日" + rel(rc.d20) : "") + "。" : "";
       if (!a.length) {
         top.appendChild(h("div", null, mk + "名單 5 日表現", h("span", { class: "num" }, "累積中"),
           h("span", { class: "vs" }, "名單滿 5 個交易日後開始計算。" + ref)));
@@ -1742,6 +1756,28 @@ footer a{color:var(--ink-2)}
   }
 
   // ---------- 分數怎麼算 ----------
+  // 「回測結果」：config.json 的 backtest 是 12 年回測，backtest.recent 是調權重用的那 2 年（算法一樣）
+  function btResult() {
+    var B = D.backtest, rc = B.recent;
+    function per(o) { return MK.map(function (m) { var x = o[m]; return x ? m + "名單 5 個交易日後平均比同市場" + rel(x.d5) + "，20 個交易日後" + rel(x.d20) : null; }).filter(Boolean).join("；"); }
+    return (rc && rc.overall ? "權重是用 " + rc.period + " 共 " + fmt(rc.days) + " 個交易日的回測調出來的：" + B.note + "。那段期間" + per(rc.overall) + "。" +
+      "拉長到 " + (B.years ? B.years + " 年（" + B.period + "）" : B.period) + "共 " + fmt(B.days) + " 個交易日，同樣的算法：" + per(B.overall) + "。"
+      : "用 " + B.period + " 共 " + fmt(B.days) + " 個交易日回測：" + B.note + "。" + per(B.overall) + "。") + (B.text || "");
+  }
+  // 「參考進出規則」那段：數字都在 config.json 的 exit.backtest（12 年回測；規則本身是用 chosen 那段期間選的）
+  function exitMethod() {
+    var R = D.exits.rule, B = R.backtest, r = B.rule || {}, b20 = B.hold20 || {}, b60 = B.hold60, rc = B.recent, yrs = B.years;
+    return "名單公布隔天開盤買；之後每天收盤後，只要分數掉到同市場第 " + R.rank + " 名以後，隔天開盤賣；最多抱 " + R.max_days + " 個交易日。" +
+      (B.chosen ? "這條規則是用 " + B.chosen + " 的名單交易，比較固定抱 5～60 天、停損、移動停損、跳空不追、掛低一點買等做法後，以平均報酬為目標選出來的（不追求勝率）。" : "") +
+      (yrs ? "拉長到 " + yrs + " 年（" : "回測（") + B.period + "）的 " + fmt(B.trades) + " 筆名單交易：平均抱約 " + fmt(r.hold, 0) + " 個交易日就因為名次掉下去賣掉" +
+      (r.full != null ? "，抱滿 " + R.max_days + " 天的只有約 " + r.full + "%" : "") + "；換算每 20 個交易日淨賺 " + fmt(r.per20, 1) + "%，固定抱 20 天是 " + fmt(b20.per20, 1) + "%" +
+      (b60 ? "，抱滿 60 天是 " + fmt(b60.per20, 1) + "%（換股少、成本低，但跟同市場股票比只多 " + fmt(b60.excess20, 1) + "%，現在的規則多 " + fmt(r.excess20, 1) + "%）" : "") +
+      "；最差的 5% 交易約 " + pct(r.worst5, 0) + "，固定抱 20 天約 " + pct(b20.worst5, 0) + "。代價是勝率比較低（" + r.win + "%），而且換股比較頻繁。" +
+      (B.price ? "也試過用固定價格出場（" + B.price.text + "），每 20 個交易日淨賺只剩 " + B.price.range +
+        "，因為停損常賣在之後會漲回來的回檔，停利又提早砍掉跑最遠的股票，所以沒有採用。" : "") + (B.bear || "") +
+      (rc ? "最近兩年（" + rc.period + "）每 20 個交易日淨賺 " + fmt(rc.per20, 1) + "%，剛好是" + (yrs ? "這 " + yrs + " 年裡" : "") + "最好的一段，不能當成常態。" : "");
+  }
+
   function renderMethod() {
     var body = document.getElementById("method-body");
     var w = L.weights || { inst_today: 10, inst_5d: 10, consistency: 30, big_holders: 15, margin: 15, revenue: 20 };
@@ -1774,20 +1810,10 @@ footer a{color:var(--ink-2)}
         h("li", null, "千張大戶持股 " + fmt(f.max_big_pct || 99) + "% 以上的不列入，多半是公開收購或合併完成，幾乎沒有流通籌碼。"),
         h("li", null, "今天符合條件的有上市 " + fmt((L.universe || {})["上市"]) + " 檔、上櫃 " + fmt((L.universe || {})["上櫃"]) + " 檔。")),
       D.backtest && D.backtest.overall ? h("h3", null, "回測結果") : null,
-      D.backtest && D.backtest.overall ? h("p", null, "用 " + D.backtest.period + " 共 " + fmt(D.backtest.days) + " 個交易日回測：" + D.backtest.note + "。" +
-        MK.map(function (m) { var o = D.backtest.overall[m]; return m + "名單 5 個交易日後平均比同市場" + rel(o.d5) + "，20 個交易日後" + rel(o.d20); }).join("；") +
-        "。差距不大，一買一賣的成本（證交稅 0.3% 加手續費）就可能吃掉。也試過估值（本益比、殖利率）、動能、限制同產業檔數，還有把美股表現加進分數，名單都沒有變好，所以沒有加。多數股票站上季線時名單比較有效，站上季線的股票不到 " +
+      D.backtest && D.backtest.overall ? h("p", null, btResult() + "差距不大，一買一賣的成本（證交稅 0.3% 加手續費）就可能吃掉。也試過估值（本益比、殖利率）、動能、限制同產業檔數，還有把美股表現加進分數，名單都沒有變好，所以沒有加。多數股票站上季線時名單比較有效，站上季線的股票不到 " +
         (D.backtest.breadth_cut || [35])[0] + "% 時參考價值較低，所以名單上方會依當天狀況提醒。") : null,
       D.exits && D.exits.rule && D.exits.rule.backtest ? h("h3", null, "參考進出規則") : null,
-      D.exits && D.exits.rule && D.exits.rule.backtest ? h("p", null, "名單公布隔天開盤買；之後每天收盤後，只要分數掉到同市場第 " + D.exits.rule.rank +
-        " 名以後，隔天開盤賣；最多抱 " + D.exits.rule.max_days + " 個交易日。回測平均抱約 " + fmt(D.exits.rule.backtest.rule.hold, 0) + " 個交易日就因為名次掉下去賣掉" +
-        (D.exits.rule.backtest.rule.full != null ? "，抱滿 " + D.exits.rule.max_days + " 天的只有約 " + D.exits.rule.backtest.rule.full + "%" : "") +
-        "。這是用 " + D.exits.rule.backtest.period + " 的 " + fmt(D.exits.rule.backtest.trades) +
-        " 筆名單交易，比較固定抱 5～60 天、停損、移動停損、跳空不追、掛低一點買等做法後，平均報酬最高的一種：換算每 20 個交易日淨賺 " + fmt(D.exits.rule.backtest.rule.per20, 1) +
-        "%，固定抱 20 天是 " + fmt(D.exits.rule.backtest.hold20.per20, 1) + "%；最差的 5% 交易約 " + fmt(D.exits.rule.backtest.rule.worst5, 0) + "%，固定抱 20 天約 " +
-        fmt(D.exits.rule.backtest.hold20.worst5, 0) + "%。代價是勝率比較低（" + D.exits.rule.backtest.rule.win + "%），而且換股比較頻繁。" +
-        (D.exits.rule.backtest.price ? "也試過用固定價格出場（" + D.exits.rule.backtest.price.text + "），每 20 個交易日淨賺只剩 " + D.exits.rule.backtest.price.range +
-          "，因為停損常賣在之後會漲回來的回檔，停利又提早砍掉跑最遠的股票，所以沒有採用。" : "") + "這兩年大多是多頭，空頭時的表現還沒驗證過。") : null,
+      D.exits && D.exits.rule && D.exits.rule.backtest ? h("p", null, exitMethod()) : null,
       h("h3", null, "什麼時候更新"),
       h("p", null, "每個交易日晚上 9 點 40 分到 11 點多之間會自動更新好幾次（融資融券約 9 點半才公布；網站的排程常晚一點，所以多排幾次），隔天早上開盤前再檢查幾次有沒有補上的資料。集保千張大戶一週更新一次" +
         (t.week ? "，這次用 " + md(t.week) + " 那一週和 " + (t.prevWeek ? md(t.prevWeek) : "前一週") + " 比較。" : "。")),
