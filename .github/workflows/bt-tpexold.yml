@@ -1,0 +1,24 @@
+name: 櫃買法人舊格式下載（暫時，用完就刪）
+on:
+  push:
+    branches: [backtest]
+    paths: [bt/tpex_inst_old.py]
+permissions:
+  contents: write
+jobs:
+  fetch:
+    strategy:
+      fail-fast: false
+      matrix:
+        range: ["2014-01-01 2015-12-31", "2016-01-01 2018-01-14"]
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          python bt/tpex_inst_old.py ${{ matrix.range }}
