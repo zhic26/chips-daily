@@ -101,7 +101,8 @@ def exit_status(cfg):
             s = st.get((d.isoformat(), p["code"]))
             if not s or s["state"] == "noentry" or (s["state"] == "sold" and s.get("exit") not in recent):
                 continue
-            it = dict(s, date=d.isoformat(), code=p["code"], name=p["name"], market=p["market"])
+            # pos：在當天名單上的名次（網頁預設只列每份名單的前 10 名）；rank 是現在的名次
+            it = dict(s, date=d.isoformat(), code=p["code"], name=p["name"], market=p["market"], pos=p.get("rank"))
             if s["state"] == "sell":  # 明天開盤要賣的：附上同一段期間同市場的平均，分得出是挑錯股還是整個市場在跌
                 it["bench"] = bench(d, p["market"], s["days"])
             items.append(it)
