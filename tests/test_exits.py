@@ -4,7 +4,7 @@ import os
 import tempfile
 import unittest
 
-from chips import exits, store
+from chips import exits, site, store
 
 CFG = {"exit": {"rank": 2, "max_days": 6}}
 
@@ -59,6 +59,18 @@ class Rule(unittest.TestCase):
         self.assertEqual(st[(self.days[0].isoformat(), "B")]["state"], "sell")
         self.assertEqual(st[(self.days[0].isoformat(), "A")]["state"], "holding")
         self.assertEqual(st[(self.days[0].isoformat(), "A")]["rank"], 1)
+
+    def test_sell_shows_market_average(self):
+        """明天要賣的股票附上同一段期間同市場的平均；三檔漲法一樣，平均就等於這一檔的報酬。持有中的不附。"""
+        for d in self.days[4:]:  # 只留前 4 天：第 3 天收盤觸發
+            os.remove(os.path.join(store.DAILY, d.isoformat() + ".json"))
+            os.remove(os.path.join(store.PICKS, d.isoformat() + ".json"))
+        _, items = site.exit_status(dict(CFG, lookback_days=1, min_avg_lots=1000, min_price=10))
+        b = next(x for x in items if x["code"] == "B")
+        self.assertEqual(b["state"], "sell")
+        self.assertAlmostEqual(b["bench"], b["ret"], places=2)
+        self.assertAlmostEqual(b["ret"], round((1.01 ** 3 - 1) * 100, 2), places=2)
+        self.assertNotIn("bench", next(x for x in items if x["code"] == "A"))
 
     def test_max_days(self):
         a = self.run_until(10)[(self.days[0].isoformat(), "A")]

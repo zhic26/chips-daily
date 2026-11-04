@@ -78,6 +78,21 @@ def exit_status(cfg):
         return cache[d]
 
     st = exits.evaluate(cfg, dates, stored, exf)
+    unis, bcache = {}, {}
+
+    def bench(d, mk, k):
+        """同一段期間的同市場對照：d 那天的同市場合格股，一樣隔天開盤買、抱 k 個交易日到收盤的平均報酬（%）。"""
+        key = (d, mk, k)
+        if key not in bcache:
+            after = [x for x in stored if x > d]
+            if d not in stored or len(after) < k:
+                bcache[key] = None
+            else:
+                if d not in unis:
+                    unis[d] = _universe(d, stored, exf, cfg)
+                bcache[key] = _avg(_hold(c, after, exf, k) for c in unis[d].get(mk, []))
+        return bcache[key]
+
     recent = set(x.isoformat() for x in stored[-10:])
     items = []
     for d in dates:
@@ -86,7 +101,10 @@ def exit_status(cfg):
             s = st.get((d.isoformat(), p["code"]))
             if not s or s["state"] == "noentry" or (s["state"] == "sold" and s.get("exit") not in recent):
                 continue
-            items.append(dict(s, date=d.isoformat(), code=p["code"], name=p["name"], market=p["market"]))
+            it = dict(s, date=d.isoformat(), code=p["code"], name=p["name"], market=p["market"])
+            if s["state"] == "sell":  # 明天開盤要賣的：附上同一段期間同市場的平均，分得出是挑錯股還是整個市場在跌
+                it["bench"] = bench(d, p["market"], s["days"])
+            items.append(it)
     return st, items
 
 

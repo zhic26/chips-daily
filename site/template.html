@@ -170,7 +170,9 @@ section.block{padding:56px 0 6px}
 .exitbox .rule{margin:0;font-size:14.5px;color:var(--ink)}
 .exitbox .sell{margin:10px 0 0;font-size:14.5px;color:var(--ink-2)}
 .exitbox .sell b{color:var(--ink);font-weight:600}
-.exitbox .sell .s{display:inline-block;margin:4px 10px 0 0;padding:2px 9px;border-radius:999px;border:1px solid var(--line);font-size:13.5px;white-space:nowrap}
+.exitbox .sell .s{display:inline-block;max-width:100%;margin:4px 10px 0 0;padding:2px 9px;border-radius:999px;border:1px solid var(--line);font-size:13.5px}
+.exitbox .sell .s span{white-space:nowrap}
+@media (max-width:600px){.exitbox .sell .s{border-radius:10px}}
 .exitbox details{margin-top:8px;font-size:14px}
 .exitbox summary{cursor:pointer;color:var(--accent);font-weight:600}
 .exitbox table{margin-top:6px}
@@ -1474,8 +1476,11 @@ footer a{color:var(--ink-2)}
         "；最多抱 " + R.max_days + " 個交易日" + (E.lastDate ? "（" + (E.approx ? "約 " : "") + md(E.lastDate) + " 收盤）" : "") + "。點開每一檔可以看它的參考買點、賣點。"));
     if (sell.length) box.appendChild(h("div", { class: "sell" }, h("b", null, "照規則" + (E.buyDate ? " " + md(E.buyDate) + "（" + wd(E.buyDate) + "）" : "明天") + "開盤要賣："),
       h("div", null, sell.map(function (x) {
-        return h("span", { class: "s" }, x.name + " " + x.code + "｜" + md(x.date) + " 名單｜至今 " + pct(x.ret, 1));
-      }))));
+        // 分成幾段，窄螢幕在段落之間換行，不會把數字切開
+        return h("span", { class: "s" }, h("span", null, x.name + " " + x.code), "｜", h("span", null, md(x.date) + " 名單"), "｜",
+          h("span", null, "至今 " + pct(x.ret, 1)), x.bench != null ? h("span", null, "（同市場 " + pct(x.bench, 1) + "）") : null);
+      })),
+      sell.some(function (x) { return x.bench != null; }) ? h("p", { class: "fine" }, "括號裡是同一段期間，同市場合格股票用一樣方式買（名單隔天開盤買、到今天收盤）的平均，用來分辨是挑錯股，還是整個市場都在跌。") : null));
     function rows(list, last) {
       return h("table", { class: "mini xt" }, h("thead", null, h("tr", null, h("th", null, "股票"), h("th", null, "名單"), h("th", null, "抱了"), h("th", null, last[0]), h("th", null, "報酬"))),
         h("tbody", null, list.map(function (x) {
