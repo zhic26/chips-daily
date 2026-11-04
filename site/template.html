@@ -259,6 +259,14 @@ section.block{padding:56px 0 6px}
 .pick-main:hover{background:color-mix(in srgb,var(--sunk) 55%,transparent)}
 .rank{grid-area:rank;font-family:var(--num);font-weight:600;font-size:18px;color:var(--ink-3);font-variant-numeric:tabular-nums;align-self:baseline}
 .pick:nth-child(-n+3) .rank{color:var(--f-big_holders)}
+.picks.rest{border-top:1px solid var(--line-soft)}
+.picks.rest .pick .rank{color:var(--ink-3)}
+.more-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;border:0;border-top:1px solid var(--line-soft);background:none;
+  font:inherit;font-size:15px;font-weight:600;color:var(--accent);padding:13px 18px;cursor:pointer;transition:background .2s}
+.more-btn:hover{background:color-mix(in srgb,var(--sunk) 55%,transparent)}
+.more-btn:last-child{border-radius:0 0 var(--radius) var(--radius)}
+.more-btn .chev{color:currentColor}
+.more-btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
 .who{grid-area:who;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;min-width:0}
 .name{font-weight:700;font-size:18px;letter-spacing:.02em}
 .code{font-family:var(--num);font-size:15px;color:var(--ink-3)}
@@ -596,7 +604,7 @@ footer a{color:var(--ink-2)}
   <div class="wrap">
     <section class="block" id="picks" aria-labelledby="picks-h">
       <h2 id="picks-h">今日名單</h2>
-      <p class="lead">上市、上櫃分開計分，各取分數最高的 20 檔。一顆籌碼代表 5 分，顏色告訴你分數從哪裡來；虛線框的標籤（籌碼偏重、注意股、處置中）是提醒，不扣分。點一下股票可以看明細。</p>
+      <p class="lead">上市、上櫃分開計分，各取分數最高的 20 檔，先列出前 10 名（回測和實盤成績都是算 20 檔）。一顆籌碼代表 5 分，顏色告訴你分數從哪裡來；虛線框的標籤（籌碼偏重、注意股、處置中）是提醒，不扣分。點一下股票可以看明細。</p>
       <div id="picks-body"></div>
     </section>
 
@@ -1410,7 +1418,10 @@ footer a{color:var(--ink-2)}
   }
 
   // ---------- 今日名單 ----------
-  var state = { market: store("market") || "上市", sort: "score", animated: false };
+  // 背後每天照樣算各 20 檔（回測、實盤成績都是 20 檔），網頁預設只列每個市場的前 SHOW 名，其他的按一下展開（不記住，下次打開又是前 SHOW 名）
+  var SHOW = 10;
+  var state = { market: store("market") || "上市", sort: "score", animated: false, more: false };
+  function topOnly(rank) { return !state.more && rank > SHOW; }  // true＝預設收起來的那一段
 
   function renderPicks() {
     var body = document.getElementById("picks-body");
@@ -1424,18 +1435,22 @@ footer a{color:var(--ink-2)}
     if (L.alertsMissing && L.alertsMissing.length) notes.push(L.alertsMissing.join("、") + "的注意股公告這次沒有抓到，「注意股」標籤可能不完整。");
     notes.forEach(function (n) { body.appendChild(h("p", { class: "note" }, n)); });
 
-    var counts = { "上市": 0, "上櫃": 0 };
-    all.forEach(function (p) { counts[p.market]++; });
+    var counts = { "上市": 0, "上櫃": 0 }, nAll = 0;
+    all.forEach(function (p) { if (!topOnly(p.rank)) { counts[p.market]++; nAll++; } });
     body.appendChild(h("div", { class: "controls" },
-      seg("市場", [["上市", "上市", counts["上市"]], ["上櫃", "上櫃", counts["上櫃"]], ["all", "全部", all.length]], state.market,
+      seg("市場", [["上市", "上市", counts["上市"]], ["上櫃", "上櫃", counts["上櫃"]], ["all", "全部", nAll]], state.market,
         function (m) { state.market = m; store("market", m); renderPicks(); }),
       h("span", { class: "seg-label" }, "排序"),
       seg("排序方式", [["score", "分數"], ["chg", "漲跌幅"], ["vol", "成交量"], ["inst", "法人買超"]], state.sort,
         function (s) { state.sort = s; renderPicks(); })));
 
-    var list = all.filter(function (p) { return state.market === "all" || p.market === state.market; });
     var key = { score: function (p) { return p.score; }, chg: function (p) { return p.chgPct; }, vol: function (p) { return p.volume; }, inst: function (p) { return p.instNet; } }[state.sort] || function (p) { return p.score; };
-    list = list.slice().sort(function (a, b) { return key(b) - key(a) || a.rank - b.rank; });
+    function sorted(a) { return a.slice().sort(function (x, y) { return key(y) - key(x) || x.rank - y.rank; }); }
+    // 前 SHOW 名和後面的分開排，換排序方式也不會把第 11～20 名排進前面
+    var mine = all.filter(function (p) { return state.market === "all" || p.market === state.market; });
+    var head = sorted(mine.filter(function (p) { return !(p.rank > SHOW); }));
+    var rest = sorted(mine.filter(function (p) { return p.rank > SHOW; }));
+    var list = state.more ? head.concat(rest) : head;  // 摘要、產業分布都只算畫面上有列出來的
 
     var avg = list.reduce(function (s, p) { return s + p.score; }, 0) / (list.length || 1);
     var up = list.filter(function (p) { return p.chgPct > 0; }).length, dn = list.filter(function (p) { return p.chgPct < 0; }).length;
@@ -1461,10 +1476,28 @@ footer a{color:var(--ink-2)}
     panel.appendChild(h("div", { class: "list-head", "aria-hidden": "true" }, h("span", null, "名次"), h("span", null, "股票"), h("span", null, "收盤"), h("span", null, "籌碼組成"), h("span", null, "分數")));
     var ol = h("ol", { class: "picks" });
     var animate = !state.animated && !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-    list.forEach(function (p, i) { ol.appendChild(pickRow(p, animate && i < 8 ? i : null, i + 1)); });
+    head.forEach(function (p, i) { ol.appendChild(pickRow(p, animate && i < 8 ? i : null, i + 1)); });
     state.animated = true;
     panel.appendChild(ol);
+    if (rest.length) {
+      var span = (state.market === "all" ? "上市、上櫃的" : "") + "第 " + (SHOW + 1) + "～" + Math.max.apply(null, rest.map(function (p) { return p.rank; })) + " 名";
+      panel.appendChild(h("button", { type: "button", class: "more-btn", id: "more-btn", "aria-expanded": String(state.more), onclick: toggleMore },
+        (state.more ? "收起" : "看") + span, chev()));
+      if (state.more) panel.appendChild(h("ol", { class: "picks rest" }, rest.map(function (p, i) { return pickRow(p, null, head.length + i + 1); })));
+    }
     body.appendChild(panel);
+  }
+
+  // 展開、收起第 11～20 名：整段重畫（摘要、參考進出也跟著換），再把捲動補回來，讓按鈕停在原來的位置
+  function toggleMore(e) {
+    var y = e.currentTarget.getBoundingClientRect().top;
+    state.more = !state.more;
+    renderPicks();
+    var b = document.getElementById("more-btn");
+    if (!b) return;
+    var d = b.getBoundingClientRect().top - y, root = document.documentElement, sb = root.style.scrollBehavior;
+    if (d) { root.style.scrollBehavior = "auto"; window.scrollBy(0, d); root.style.scrollBehavior = sb; }
+    b.focus({ preventScroll: true });
   }
 
   // 只想抱幾檔的人：上市、上櫃合起來分數最高的 K 檔（K 跟「我的持股」的小帳戶參考同一個設定）
@@ -1486,7 +1519,8 @@ footer a{color:var(--ink-2)}
   function exitBox(mk) {
     var E = D.exits || {}, R = E.rule || {};
     if (!R.rank) return null;
-    var items = (E.items || []).filter(function (x) { return mk === "all" || x.market === mk; });
+    // pos 是那份名單上的名次：預設只看前 SHOW 名，跟名單一起展開
+    var items = (E.items || []).filter(function (x) { return (mk === "all" || x.market === mk) && !topOnly(x.pos); });
     // 同一檔出現在好幾份名單：當成同一筆部位，用最早那份名單的買進價（賣出則留最近一次）
     function one(list, latest) {
       var m = {};
@@ -1500,7 +1534,8 @@ footer a{color:var(--ink-2)}
     var box = h("div", { class: "exitbox" }, h("h3", null, "參考進出（依規則算出，不是買賣建議）"),
       h("p", { class: "rule" }, (E.buyDate ? md(E.buyDate) + "（" + wd(E.buyDate) + "）開盤買" : "名單公布隔天開盤買") + "；之後分數掉到同市場第 " + R.rank +
         " 名以後，隔天開盤賣" + (bt.hold ? "（回測平均抱約 " + fmt(bt.hold, 0) + " 個交易日" + (bt.full != null ? "，抱滿 " + R.max_days + " 天的只有約 " + bt.full + "%" : "") + "）" : "") +
-        "；最多抱 " + R.max_days + " 個交易日" + (E.lastDate ? "（" + (E.approx ? "約 " : "") + md(E.lastDate) + " 收盤）" : "") + "。點開每一檔可以看它的參考買點、賣點。"));
+        "；最多抱 " + R.max_days + " 個交易日" + (E.lastDate ? "（" + (E.approx ? "約 " : "") + md(E.lastDate) + " 收盤）" : "") + "。" +
+        (state.more ? "" : "這裡只列每份名單的前 " + SHOW + " 名。") + "點開每一檔可以看它的參考買點、賣點。"));
     if (sell.length) box.appendChild(h("div", { class: "sell" }, h("b", null, "照規則" + (E.buyDate ? " " + md(E.buyDate) + "（" + wd(E.buyDate) + "）" : "明天") + "開盤要賣："),
       h("div", null, sell.map(function (x) {
         // 分成幾段，窄螢幕在段落之間換行，不會把數字切開
@@ -1519,10 +1554,11 @@ footer a{color:var(--ink-2)}
       rows(hold, ["現在名次", function (x) { return x.rank == null ? "—" : x.rank > 100 ? "100 名外" : "第 " + x.rank + " 名"; }])));
     if (sold.length) box.appendChild(h("details", null, h("summary", null, "最近照規則賣掉的 " + sold.length + " 檔"),
       rows(sold, ["賣出", function (x) { return md(x.exit) + (x.why === "max" ? "（抱滿）" : ""); }])));
-    if (!items.length) box.appendChild(h("p", { class: "fine" }, "之前名單的股票照規則的狀態，會從下一個交易日開始顯示在這裡。"));
-    var yrs = R.backtest && R.backtest.years, rc = R.backtest && R.backtest.recent;
-    if (bt.per20 != null) box.appendChild(h("p", { class: "fine" }, "回測" + (yrs ? " " + yrs + " 年" : "") + "（" + R.backtest.period + "，" + fmt(R.backtest.trades) + " 筆）：平均抱 " + fmt(bt.hold, 0) +
+    if (!(E.items || []).length) box.appendChild(h("p", { class: "fine" }, "之前名單的股票照規則的狀態，會從下一個交易日開始顯示在這裡。"));
+    var yrs = R.backtest && R.backtest.years, rc = R.backtest && R.backtest.recent, t10 = R.backtest && R.backtest.top10;
+    if (bt.per20 != null) box.appendChild(h("p", { class: "fine" }, "回測" + (yrs ? " " + yrs + " 年" : "") + "（" + R.backtest.period + "，名單 20 檔共 " + fmt(R.backtest.trades) + " 筆）：平均抱 " + fmt(bt.hold, 0) +
       " 天，換算每 20 個交易日淨賺 " + fmt(bt.per20, 1) + "%（固定抱 20 天是 " + fmt(b20.per20, 1) + "%）；勝率 " + bt.win + "%（固定抱 20 天 " + b20.win + "%）。" +
+      (t10 ? "只算每份名單的前 10 名是 " + fmt(t10.per20, 1) + "%、勝率 " + t10.win + "%。" : "") +
       (rc ? "最近兩年（" + rc.period + "）是 " + fmt(rc.per20, 1) + "%，剛好是" + (yrs ? "這 " + yrs + " 年裡" : "") + "最好的一段，不能當成常態。" : "") +
       "換股比較頻繁，小額或零股交易時手續費最低收費會讓成本比回測的 0.4% 高。"));
     return box;
@@ -1542,7 +1578,8 @@ footer a{color:var(--ink-2)}
     var lab = h("div", { class: "seclab", "aria-hidden": "true" }, parts.map(function (x) {
       var s = h("span", null, x[0] + " " + x[1]); s.style.setProperty("--c", x[2]); return s; }));
     var top = keys[0], share = sec[top] / list.length;
-    var warn = share >= 0.3 ? h("p", { class: "secwarn" }, "有 " + sec[top] + " 檔是" + top + "（" + fmt(share * 100, 0) + "%），漲跌容易一起動，等於押在這個族群。" +
+    // 只列 10 檔時 3 檔同產業就有 30%，所以還要超過 3 檔才提醒（跟下面「限制最多 3 檔」的說法一致）
+    var warn = share >= 0.3 && sec[top] > 3 ? h("p", { class: "secwarn" }, "有 " + sec[top] + " 檔是" + top + "（" + fmt(share * 100, 0) + "%），漲跌容易一起動，等於押在這個族群。" +
       "回測裡限制同產業最多 3 檔，20 日報酬反而少很多，所以不限制，只提醒。") : null;
     return h("div", { class: "secmix" }, bar, lab, warn);
   }

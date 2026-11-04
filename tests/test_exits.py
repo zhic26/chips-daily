@@ -29,8 +29,8 @@ class Rule(unittest.TestCase):
         # 第 0 天的名單選了 A、B；排名：第 0～2 天 A、B 都在前 2 名，第 3 天 B 掉到第 3 名
         for i, day in enumerate(self.days):
             rk = ["A", "B", "C"] if i != 3 else ["A", "C", "B"]
-            store.save_picks(day, {"date": day.isoformat(), "picks": [{"code": "A", "market": "上市", "name": "甲"},
-                                                                         {"code": "B", "market": "上市", "name": "乙"}] if i == 0 else [],
+            store.save_picks(day, {"date": day.isoformat(), "picks": [{"code": "A", "market": "上市", "name": "甲", "rank": 1},
+                                                                         {"code": "B", "market": "上市", "name": "乙", "rank": 2}] if i == 0 else [],
                                    "ranking": {"上市": rk}})
 
     def tearDown(self):
@@ -71,6 +71,16 @@ class Rule(unittest.TestCase):
         self.assertAlmostEqual(b["bench"], b["ret"], places=2)
         self.assertAlmostEqual(b["ret"], round((1.01 ** 3 - 1) * 100, 2), places=2)
         self.assertNotIn("bench", next(x for x in items if x["code"] == "A"))
+
+    def test_items_keep_list_position(self):
+        """每一筆帶著它在當天名單上的名次（pos），網頁靠這個只列前 10 名；rank 是現在的名次，兩個分開。"""
+        for d in self.days[4:]:
+            os.remove(os.path.join(store.DAILY, d.isoformat() + ".json"))
+            os.remove(os.path.join(store.PICKS, d.isoformat() + ".json"))
+        _, items = site.exit_status(dict(CFG, lookback_days=1, min_avg_lots=1000, min_price=10))
+        by = {x["code"]: x for x in items}
+        self.assertEqual((by["A"]["pos"], by["B"]["pos"]), (1, 2))
+        self.assertEqual(by["B"]["rank"], 3)  # 第 3 天掉到第 3 名
 
     def test_max_days(self):
         a = self.run_until(10)[(self.days[0].isoformat(), "A")]
