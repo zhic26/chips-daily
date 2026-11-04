@@ -189,6 +189,9 @@ section.block{padding:56px 0 6px}
 .slotbox select{font:inherit;font-weight:600;min-height:34px;padding:2px 8px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
 .slotbox p{margin:7px 0 0}
 .slotbox .fine{font-size:12.5px;line-height:1.65;color:var(--ink-3)}
+.fchip{display:inline-block;font-size:12px;font-weight:500;line-height:1.55;border-radius:999px;padding:0 8px;margin-right:8px;border:1px solid var(--line);color:var(--ink-2);vertical-align:.08em}
+.fchip.on{border-color:var(--accent);color:var(--accent)}
+.fchip.off{border-style:dashed;color:var(--ink-3)}
 .mini .st{font-size:12.5px;color:var(--ink-2);white-space:nowrap}
 .plan{display:grid;gap:8px;margin:0 0 14px;padding:12px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line-soft)}
 .plan div{display:grid;grid-template-columns:5.2em minmax(0,1fr);gap:2px 10px;align-items:baseline}
@@ -1135,6 +1138,20 @@ footer a{color:var(--ink-2)}
       "% 輸給加權指數，所以檔數越少越看運氣。同期加權指數年化 " + fmt(t.cagr, 1) + "%（不含股息）、最大回檔 " + pct(t.mdd, 1) + when(td[0], td[1], td[2]) +
       "。" + (S.years ? S.years + " 年下來，只抱名單股的做法大多沒有贏加權：" : "") + "名單股平均比一般股票好一點，但只抱幾檔又常換股，帳戶不一定贏大盤，而且回檔深很多。";
   }
+  // 盤勢濾網：上市站上季線的股票比例高於門檻才買名單股，其他時候那筆錢改買大盤（回測在 D.exits.rule.slots.filter）
+  function regimeGate() {
+    var S = slotInfo(), F = S && S.filter, T = L.temp, b = F && T && T.breadth && T.breadth[F.market];
+    if (!b || b.pct == null) return null;
+    var v = Math.round(b.pct);  // 跟盤勢提醒一樣，用四捨五入後的數字判斷
+    return { open: v > F.threshold, b: v, F: F };
+  }
+  function gateChip(g) { return h("span", { class: "fchip " + (g.open ? "on" : "off") }, g.open ? "盤勢濾網打開" : "盤勢濾網關閉"); }
+  function gateText(g) {
+    var F = g.F, w = F["with"], wo = F.without, ix = F.index;
+    return "盤勢濾網的回測（" + F.period + "，每月投入一筆、只買分數最高的 1 檔、抱 60 個交易日）：" + F.market + "站上季線的股票超過 " + F.threshold +
+      "% 的月份才買名單股、其他月份改買大盤，年化 " + fmt(w[0], 1) + "%、最大回檔 " + pct(w[1], 1) + "；不加濾網是 " + fmt(wo[0], 1) + "%、" + pct(wo[1], 1) +
+      "；每月都買大盤是 " + fmt(ix[0], 1) + "%、" + pct(ix[1], 1) + "。加了濾網大約跟大盤打平、回檔也差不多，沒有贏大盤，但不會像不加濾網那樣深。";
+  }
   function slotBox(st) {
     var S = slotInfo(), all = combined();
     if (!S || all.length < 3) return null;
@@ -1149,13 +1166,19 @@ footer a{color:var(--ink-2)}
     var free = Math.max(0, k - used), cand = all.filter(function (p) { return !held[p.code]; }).slice(0, free);
     var sel = h("select", { id: "slot-k", "aria-label": "最多抱幾檔", onchange: function (e) { store("slots", e.target.value); renderMine(true); renderPicks(); } },
       SLOT_OPTS.map(function (n) { return h("option", { value: String(n), selected: n === k }, n + " 檔"); }));
-    var day = E.buyDate ? mdw(E.buyDate) : "下一個交易日";
-    var now = free && cand.length ? day + "開盤可以依序補：" + cand.map(function (p) { return p.name + " " + p.code; }).join("、") + "（今天名單上市、上櫃合起來分數最高、你還沒有的）。"
-      : free ? "今天的名單沒有可以補的股票。" : "格子都滿了，等有股票照規則賣掉再補。";
+    var day = E.buyDate ? mdw(E.buyDate) : "下一個交易日", g = regimeGate();
+    var list = cand.map(function (p) { return p.name + " " + p.code; }).join("、"), now;
+    if (!free) now = ["格子都滿了，等有股票照規則賣掉再補。"];
+    else if (!cand.length) now = ["今天的名單沒有可以補的股票。"];
+    else if (g && !g.open) now = [gateChip(g), g.F.market + "站上季線的股票只有 " + g.b + "%（不到 " + g.F.threshold + "%）：回測裡這種時候改買大盤（例如 0050）比較好，先不補名單股。如果還是要補，" +
+      day + "開盤依序是：" + list + "。"];
+    else now = [g ? gateChip(g) : null, (g ? g.F.market + "站上季線的股票 " + g.b + "%。" : "") + day + "開盤可以依序補：" + list + "（今天名單上市、上櫃合起來分數最高、你還沒有的）。"];
     return h("div", { class: "slotbox" },
       h("div", { class: "slot-head" }, h("label", { for: "slot-k" }, "小帳戶參考：最多抱"), sel),
-      h("p", null, "照規則的持股 " + used + " 檔（只算有套用參考賣點的個股），空 " + free + " 格。" + now),
-      h("p", { class: "fine" }, slotsText(k) + "依規則算出的參考，不是買賣建議。"));
+      h("p", null, "照規則的持股 " + used + " 檔（只算有套用參考賣點的個股），空 " + free + " 格。"),
+      h("p", null, now),
+      h("p", { class: "fine" }, slotsText(k)),
+      h("p", { class: "fine" }, (g ? gateText(g) : "") + "依規則算出的參考，不是買賣建議。"));
   }
 
   // 價格載入完要重畫時（keep），保留表單裡已經打的字和游標所在的欄位
@@ -1448,11 +1471,15 @@ footer a{color:var(--ink-2)}
   function smallBox() {
     var S = slotInfo(), all = combined(), R = (D.exits || {}).rule || {};
     if (!S || all.length < 3) return null;
-    var k = slotK();
+    var k = slotK(), g = regimeGate();
+    var lead = !g ? [] : g.open
+      ? [gateChip(g), g.F.market + "站上季線的股票 " + g.b + "%（高於 " + g.F.threshold + "%），回測裡這種時候名單比較有效。"]
+      : [gateChip(g), g.F.market + "站上季線的股票只有 " + g.b + "%（不到 " + g.F.threshold + "%）。回測裡這種時候不買名單股、那筆錢改買大盤（例如 0050）比較好；如果還是要買，"];
     return h("div", { class: "smallbox" },
-      h("b", null, "只想抱 " + k + " 檔？"), "上市、上櫃合起來分數最高的是 " + all.slice(0, k).map(function (p) { return p.name; }).join("、") +
+      h("b", null, "只想抱 " + k + " 檔？"), lead, "上市、上櫃合起來分數最高的是 " + all.slice(0, k).map(function (p) { return p.name; }).join("、") +
         "。有空位才照這個順序補；買了記在", h("a", { href: "#holdings" }, "「我的持股」"), "，掉出同市場前 " + (R.rank || 80) + " 名時會提醒你賣。",
-      h("details", null, h("summary", null, "回測結果（也跟加權指數比）"), h("p", null, slotsText(k) + "依規則算出的參考，不是買賣建議。")));
+      h("details", null, h("summary", null, "回測結果（也跟加權指數比）"), h("p", null, slotsText(k)),
+        h("p", null, (g ? gateText(g) : "") + "依規則算出的參考，不是買賣建議。")));
   }
 
   // 參考進出：依回測選出（平均報酬最高）。這裡只描述規則算出的結果，不是買賣建議
