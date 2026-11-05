@@ -37,8 +37,9 @@ DEFAULTS = {
     "history_days": 30,  # 後續表現列出最近幾份名單（要滿 20 個交易日才有 20 日報酬）
     "market_history_days": 80,   # 算季線（60 日均線）和近 20 日趨勢需要的交易日數
     "keep_daily_days": 85,
-    # 權重依 2024/10～2026/10 回測調整：連買天數最有用、買超張數幾乎沒有預測力，融資看近 5 日
-    "weights": {"inst_today": 10, "inst_5d": 10, "consistency": 30, "big_holders": 15, "margin": 15, "revenue": 20},
+    # 第 7 版（2026-11-05）依 12 年回測（1001 組權重，前後兩段互相驗證、逐年只用過去資料挑）：法人買超天數和營收最有用；
+    # 融資 5 日減少權重越高名單越差，法人今日、5 日買超張數加了略差，都改成 0 分（只當標籤）。千張大戶沒有那麼久的資料，維持 15
+    "weights": {"inst_today": 0, "inst_5d": 0, "consistency": 50, "big_holders": 15, "margin": 0, "revenue": 35},
     # 籌碼偏重：融資 5 日增幅、20 日漲幅超過門檻就標示；deduct=true 才會扣分（回測扣分沒有提高報酬）
     "crowding": {"margin_5d_pct": [10, 20], "margin_min_lots": 300, "runup_20d_pct": [30, 50], "points": [5, 10],
                  "max_penalty": 15, "deduct": False},
