@@ -1,0 +1,26 @@
+name: 估值、借券、季報資料（12 年回測用，暫時）
+on:
+  push:
+    branches: [backtest]
+    paths: [bt/fund_jobs.txt]
+permissions:
+  contents: write
+jobs:
+  fetch:
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix:
+        part: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 下載
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          python bt/fund12.py $(sed -n "${{ matrix.part }}p" bt/fund_jobs.txt)
