@@ -2,6 +2,7 @@
 用法：
   python bt/fund12.py val  twse|tpex 起日 迄日  → bt/val/<市場>/YYYY-MM-DD.json.gz：{代號: [本益比, 股價淨值比, 殖利率%]}（同 valuation.py）
   python bt/fund12.py sbl  twse|tpex 起日 迄日  → bt/sbl/<市場>/YYYY-MM-DD.json.gz：{"url": 用的網址, "fields": 欄位, "rows": {代號: [各欄數字]}}
+  最後可以多給一個數字＝每幾個交易日抓一次（預設 5；給 1 就是每天，2026-11-09 測「借券加進分數」用）
   python bt/fund12.py mops twse|tpex            → bt/mops/<市場>/<民國年>Q<季>.html.gz：公開資訊觀測站綜合損益表彙總（原始內容，事後解析）
 取樣日是 bt/raw 全部交易日裡「第 0、5、10…個」，所有工作對齊同一組日子。任何一天失敗都不中斷，每 40 筆存回 backtest 分支。"""
 import datetime as dt
@@ -174,7 +175,8 @@ def save(path, obj, raw=False):
 def run_daily(parse, urls, out):
     start, end = (dt.date.fromisoformat(x) for x in sys.argv[3:5])
     days = sorted(dt.date.fromisoformat(os.path.basename(p)[:10]) for p in glob.glob("bt/raw/*.json.gz"))
-    pick = [d for i, d in enumerate(days) if i % 5 == 0 and start <= d <= end]
+    step = int(sys.argv[5]) if len(sys.argv) > 5 else 5
+    pick = [d for i, d in enumerate(days) if i % step == 0 and start <= d <= end]
     todo = [d for d in pick if not os.path.exists(f"{out}/{d}.json.gz")]
     print(MODE, MK, f"取樣 {len(pick)} 天，要下載 {len(todo)} 天", flush=True)
     if not todo:
@@ -211,7 +213,7 @@ def run_daily(parse, urls, out):
             continue
         save(f"{out}/{d}.json.gz", got)
         n += 1
-        if n % 40 == 0:
+        if n % (40 if step == 5 else 100) == 0:
             commit(out, str(d))
     commit(out, "完成")
     print("完成", n + 1, "天，失敗", bad, "天", flush=True)
