@@ -1,15 +1,16 @@
 """下載一個交易日的盤後資料，整理成 data/daily/YYYY-MM-DD.json。
 
-完整版（最近幾個交易日，用來計分）：行情、三大法人、融資融券、當沖、指數、法人金額。
+完整版（最近幾個交易日，用來計分）：行情、三大法人、融資融券、當沖、指數、法人金額、借券賣出餘額。
 精簡版（更早的日子，用來算季線、量能、融資趨勢）：只有行情與大盤統計，標記 light。
 尚未公布的資料（例如晚上 9 點半前的融資融券）會記在 pending，下次執行再補抓。
 """
 from . import sources as S
-from .checks import check_day
+from .checks import DataError, check_day
 from .net import FetchError
 
 SOURCES = ["twse_inst", "twse_quotes", "tpex_inst", "tpex_quotes", "tpex_index", "twse_flows",
-           "twse_margin", "tpex_margin", "twse_dt", "tpex_dt"]
+           "twse_margin", "tpex_margin", "twse_dt", "tpex_dt", "twse_sbl", "tpex_sbl"]
+SBL = ("twse_sbl", "tpex_sbl")  # 借券賣出餘額：格式看起來不對時這天先不用，名單照常更新（記進 problems，讓這次執行顯示失敗）
 
 
 def _i(v):
@@ -61,6 +62,8 @@ def blank(d, light=False):
           "q": {}, "inst": {}, "margin": {}, "dt": {}, "shares": {}, "indices": {}, "market": {}}
     if light:
         ex["light"] = True
+    else:
+        ex["sbl"] = {}
     return ex
 
 
@@ -122,6 +125,11 @@ def _run(src, d, ex, companies):
         if not r:
             return False
         ex["dt"].update({c: [_i(v["dtVol"]), 1 if v["noShortFirst"] else 0] for c, v in r.items()})
+    elif src in SBL:
+        r = (S.twse_sbl if src == "twse_sbl" else S.tpex_sbl)(d)
+        if not r:
+            return False
+        ex.setdefault("sbl", {}).update({c: [round(v["bal"] / 1000), round(v["chg"] / 1000)] for c, v in r.items()})  # 張：[餘額, 跟前一天比]
     return True
 
 
@@ -129,8 +137,9 @@ def _stamp(ex):
     ex["fetchedAt"] = S.taipei_now().isoformat(timespec="minutes")
 
 
-def fetch_day(d, companies, existing=None):
-    """完整版。新的一天：證交所沒有法人資料就回傳 None（休市或尚未公布）。已有的一天：只補抓 pending 的來源。"""
+def fetch_day(d, companies, existing=None, problems=None):
+    """完整版。新的一天：證交所沒有法人資料就回傳 None（休市或尚未公布）。已有的一天：只補抓 pending 的來源。
+    problems：借券資料格式不對時記在這裡（不擋名單）。"""
     ex = existing or blank(d)
     fresh = existing is None
     changed = False
@@ -141,6 +150,13 @@ def fetch_day(d, companies, existing=None):
             if fresh and src in ("twse_inst", "twse_quotes"):
                 raise  # 連線問題，不是休市：讓這次執行失敗，下次排程再試
             print(f"  {src} 下載失敗，下次再補：{e}")
+            ok = False
+        except DataError as e:
+            if src not in SBL:
+                raise
+            print(f"  {src} 格式看起來不對，這次先不用：{e}")
+            if problems is not None:
+                problems.append(f"借券賣出餘額 {d}：{e}")
             ok = False
         if fresh and src == "twse_inst" and not ok:
             return None

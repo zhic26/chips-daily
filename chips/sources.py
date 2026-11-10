@@ -202,6 +202,29 @@ def twse_margin(d):
     return out, summary
 
 
+def _sbl_rows(j, what):
+    """借券賣出餘額表：{代號: {bal 當日餘額, chg 跟前一天比}}，單位：股。
+    證交所 TWT93U 和櫃買中心的表格一樣：前 6 欄是融券，第 9～13 欄是借券賣出的前日餘額、當日賣出、當日還券、當日調整、當日餘額。"""
+    tabs = ([{"fields": j.get("fields"), "data": j["data"]}] if j.get("data") else []) + \
+        [t for t in (j.get("tables") or []) if isinstance(t, dict) and t.get("data")]
+    t = next((t for t in tabs if len(t["data"]) > 50), None)
+    if not t:
+        return None
+    _expect(t.get("fields"), {8: "前日餘額", 9: "當日賣出", 12: "當日餘額"}, what)
+    out = {}
+    for r in t["data"]:
+        code = str(r[0]).strip()
+        if is_common_stock(code) and len(r) >= 13:
+            out[code] = {"bal": z(r[12]), "chg": z(r[12]) - z(r[8])}
+    return out or None
+
+
+def twse_sbl(d):
+    """借券賣出餘額（上市）。跟融資融券差不多時間公布（約晚上 9 點半）；不能借券賣出的股票不在表上。"""
+    j = _get(f"{TWSE}/marginTrading/TWT93U?date={d:%Y%m%d}&response=json")
+    return _sbl_rows(j, "證交所借券賣出") if j else None
+
+
 def twse_daytrade(d):
     """當日沖銷交易標的：{代號: {dtVol 當沖成交股數, noShortFirst 暫停先賣後買}}。"""
     j = _get(f"{TWSE}/dayTrading/TWTB4U?date={d:%Y%m%d}&selectType=All&response=json")
@@ -322,6 +345,12 @@ def tpex_margin(d):
             continue
         out[code] = {"mBal": z(r[6]), "mChg": z(r[6]) - z(r[2]), "sBal": z(r[14]), "sChg": z(r[14]) - z(r[10])}
     return out
+
+
+def tpex_sbl(d):
+    """借券賣出餘額（上櫃），格式同 twse_sbl。"""
+    j = _get(f"{TPEX}/margin/sbl?date={d:%Y/%m/%d}&response=json")
+    return _sbl_rows(j, "櫃買中心借券賣出") if j else None
 
 
 def tpex_daytrade(d):

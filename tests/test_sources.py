@@ -99,6 +99,64 @@ class Daily(unittest.TestCase):
                 self.assertLessEqual(v["close"], v["high"])
 
 
+    def test_sbl(self):
+        """借券賣出餘額：證交所、櫃買中心表格一樣，取第 9 欄（前日餘額）和第 13 欄（當日餘額），單位是股。"""
+        def more_rows(name, j):  # 樣本只留了 25 列，解析時要求超過 50 列才算完整
+            for t in [j] + (j.get("tables") or []):
+                if t.get("data"):
+                    t["data"] *= 3
+            return j
+        with fake_web(more_rows):
+            tw, tp = S.twse_sbl(D), S.tpex_sbl(D)
+        for r in (tw, tp):
+            self.assertGreaterEqual(len(r), 10)
+            for code, v in r.items():
+                self.assertRegex(code, r"^[1-9]\d{3}$")
+                self.assertGreaterEqual(v["bal"], 0)
+                self.assertGreaterEqual(v["bal"] - v["chg"], 0)  # 前日餘額不會是負的
+        self.assertTrue(any(v["bal"] > 0 for v in tw.values()))
+
+    def test_sbl_columns_moved(self):
+        def shift(name, j):
+            if name in ("twse_TWT93U", "tpex_sbl"):
+                for t in [j] + (j.get("tables") or []):
+                    f = t.get("fields")
+                    if f:
+                        f.insert(3, "新欄位")
+                        f.pop()
+                    if t.get("data"):
+                        t["data"] *= 3
+            return j
+        with fake_web(shift):
+            for call in (lambda: S.twse_sbl(D), lambda: S.tpex_sbl(D)):
+                with self.assertRaises(DataError):
+                    call()
+
+    def test_daily_sbl(self):
+        """借券存成張；格式不對時不擋名單：這天先不用、記進 problems、留在 pending 下次再抓。"""
+        from chips import daily
+        from tests.helpers import latest
+        self.assertIn("sbl", daily.blank(D))
+        self.assertNotIn("sbl", daily.blank(D, light=True))
+        ex = latest("daily")
+        if ex is None:
+            self.skipTest("repo 裡沒有真實資料")
+        ex = dict(ex, pending=["twse_sbl", "tpex_sbl"])
+        ex.pop("sbl", None)
+        real = S.twse_sbl, S.tpex_sbl
+
+        def bad(d):
+            raise DataError("證交所借券賣出第 13 欄應該是「當日餘額」，現在是「次一營業日可限額」，網站可能改版")
+        S.twse_sbl, S.tpex_sbl = bad, (lambda d: {"6488": {"bal": 1234567.0, "chg": -1000.0}})
+        try:
+            probs = []
+            out = daily.fetch_day(D, {}, existing=ex, problems=probs)
+        finally:
+            S.twse_sbl, S.tpex_sbl = real
+        self.assertEqual(out["pending"], ["twse_sbl"])
+        self.assertEqual(out["sbl"], {"6488": [1235, -1]})
+        self.assertEqual(len(probs), 1)
+
     def test_fixed_columns_moved(self):
         """用固定位置解析的表，欄位順序一變就要報錯。"""
         def shift(name, j):

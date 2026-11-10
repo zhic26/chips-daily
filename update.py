@@ -17,7 +17,7 @@ from chips import model, site, store, tcal, track
 from chips import sources as S
 from chips.checks import DataError, check_picks
 from chips.bigholders import BigProvider
-from chips.daily import backfill_market, fetch_day, fetch_light, fill_etf
+from chips.daily import SBL, backfill_market, fetch_day, fetch_light, fill_etf
 from chips.net import FetchError
 
 STALE_WEEKDAYS = 8  # 超過這麼多個平日都沒抓到新資料，就當作出問題（農曆年連假最長約 7 個平日）
@@ -38,8 +38,9 @@ DEFAULTS = {
     "market_history_days": 80,   # 算季線（60 日均線）和近 20 日趨勢需要的交易日數
     "keep_daily_days": 85,
     # 第 7 版（2026-11-05）依 12 年回測（1001 組權重，前後兩段互相驗證、逐年只用過去資料挑）：法人買超天數和營收最有用；
-    # 融資 5 日減少權重越高名單越差，法人今日、5 日買超張數加了略差，都改成 0 分（只當標籤）。千張大戶沒有那麼久的資料，維持 15
-    "weights": {"inst_today": 0, "inst_5d": 0, "consistency": 50, "big_holders": 15, "margin": 0, "revenue": 35},
+    # 融資 5 日減少權重越高名單越差，法人今日、5 日買超張數加了略差，都改成 0 分（只當標籤）。千張大戶沒有那麼久的資料，維持 15。
+    # 第 8 版（2026-11-10）加借券賣出餘額（÷ 5 日均量，越少越高分）15 分，天數、營收依比例調成 40、30（backtest 分支 bt/analysis/sbl）
+    "weights": {"inst_today": 0, "inst_5d": 0, "consistency": 40, "big_holders": 15, "margin": 0, "revenue": 30, "sbl": 15},
     # 籌碼偏重：融資 5 日增幅、20 日漲幅超過門檻就標示；deduct=true 才會扣分（回測扣分沒有提高報酬）
     "crowding": {"margin_5d_pct": [10, 20], "margin_min_lots": 300, "runup_20d_pct": [30, 50], "points": [5, 10],
                  "max_penalty": 15, "deduct": False},
@@ -126,7 +127,7 @@ class Calendar:
             store.save_meta("nontrading", {"dates": sorted(self.dates)})
 
 
-def collect_days(target, need, cal, comp):
+def collect_days(target, need, cal, comp, problems=None):
     """從 target 往回找 need 個交易日的完整資料，缺的就下載。回傳 (新到舊的日期, {日期: 資料})。"""
     days, exs = [], {}
     d = target
@@ -137,17 +138,23 @@ def collect_days(target, need, cal, comp):
         ex = store.load_daily(d)
         if ex is None or ex.get("light"):
             print(f"下載 {d} 盤後資料…", flush=True)
-            ex = fetch_day(d, comp)
+            ex = fetch_day(d, comp, problems=problems)
             if ex is None:
                 print(f"  {d} 沒有資料（休市或尚未公布）")
                 cal.mark(d)
                 d -= dt.timedelta(days=1)
                 continue
             store.save_daily(d, ex)
+        elif "sbl" not in ex:  # 借券資料上線前存的日子：補抓一次（官方網站查得到以前的日子）
+            print(f"補抓 {d} 借券賣出餘額", flush=True)
+            ex["sbl"] = {}
+            ex["pending"] = list(ex["pending"]) + [s for s in SBL if s not in ex["pending"]]
+            ex = fetch_day(d, comp, existing=ex, problems=problems)
+            store.save_daily(d, ex)
         elif ex["pending"] and (cal.today - d).days <= 3:
             before = list(ex["pending"])
             print(f"補抓 {d} 尚未公布的資料：{', '.join(before)}", flush=True)
-            ex = fetch_day(d, comp, existing=ex)
+            ex = fetch_day(d, comp, existing=ex, problems=problems)
             if ex["pending"] != before:
                 store.save_daily(d, ex)
         if ex["pending"]:
@@ -248,8 +255,9 @@ def main():
     outdated = [d for d in recent if (store.load_picks(d) or {}).get("model") != model.MODEL_VERSION]
     backfill = cfg["backfill_days"] if len(recent) < cfg["backfill_days"] or outdated else 1
     need = max(cfg["lookback_days"] + backfill - 1, cfg["lookback_days"])
+    problems = []  # 不影響分數、但格式看起來不對的資料：名單照常更新，最後讓這次執行顯示失敗以便通知
     try:
-        days, exs = collect_days(target, need, cal, comp)
+        days, exs = collect_days(target, need, cal, comp, problems)
         if len(days) < cfg["lookback_days"]:
             sys.exit("找不到足夠的交易日資料")
         gap = sum(1 for k in range(1, (target - days[0]).days + 1) if (days[0] + dt.timedelta(days=k)).weekday() < 5)
@@ -266,7 +274,6 @@ def main():
     print("交易日：", " ".join(f"{d:%m/%d}" for d in days))
 
     full = [d for d in hist if not exs[d].get("light")]  # 有完整資料的日子（算連買天數用）
-    problems = []  # 不影響分數、但格式看起來不對的資料：名單照常更新，最後讓這次執行顯示失敗以便通知
 
     try:
         al, bad = A.update(full[:backfill + 5], now)

@@ -14,6 +14,7 @@ ROUTES = {
     "insti/dailyTrade": "tpex_insti", "afterTrading/otc": "tpex_otc", "margin/balance": "tpex_margin",
     "announcement/notice": "twse_notice", "announcement/punish": "twse_punish",
     "bulletin/attention": "tpex_attention", "bulletin/disposal": "tpex_disposal", "indexInfo/inx": "tpex_inx",
+    "marginTrading/TWT93U": "twse_TWT93U", "margin/sbl": "tpex_sbl",
 }
 
 

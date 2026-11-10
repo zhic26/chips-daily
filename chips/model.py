@@ -1,7 +1,7 @@
 """籌碼評分、大盤體溫與各種排行。輸入是 data/daily 的每日盤後資料，輸出是一天的結果。"""
 from .sources import INDUSTRY
 
-MODEL_VERSION = 7  # 計分方式改版時加一，舊的名單會在下次執行時用新方式重算（實盤紀錄 data/track 不會改）。第 7 版：2026-11-05 權重改成天數 50、營收 35、千張大戶 15
+MODEL_VERSION = 8  # 計分方式改版時加一，舊的名單會在下次執行時用新方式重算（實盤紀錄 data/track 不會改）。第 7 版：2026-11-05 權重改成天數 50、營收 35、千張大戶 15；第 8 版：2026-11-10 加借券賣出，天數 40、營收 30、大戶 15、借券 15
 RANK_KEEP = 100  # 每天存下各市場分數前幾名（出場規則看「是否掉到第 N 名以後」）
 LOT = 1000
 MARKETS = ("上市", "上櫃")
@@ -157,6 +157,7 @@ def stock_rows(days, exs, cfg, companies, history):
             margin_add5 = sum(v[1] for v in ms)
             base = ms[0][0] - margin_add5
             margin_up5 = round(margin_add5 / base * 100, 1) if base > 0 else None
+        sb = (e0.get("sbl") or {}).get(code)  # [借券賣出餘額, 跟前一天比]（張）；不能借券賣出的股票不在表上
         cl = history.closes(code, d0, 61)
         ret20 = round((close / cl[20] - 1) * 100, 1) if len(cl) > 20 and cl[20] else None
         win60 = [v for v in cl[:60] if v is not None]
@@ -170,6 +171,8 @@ def stock_rows(days, exs, cfg, companies, history):
             "foreignStreak": _streak(f_all), "trustStreak": _streak(t_all),
             "marginChg": round(m[1]) if m else None, "marginBal": round(m[0]) if m else None,
             "marginAdd5": round(margin_add5) if margin_add5 is not None else None, "marginUp5": margin_up5,
+            "sblBal": sb[0] if sb else None, "sblChg": sb[1] if sb else None,
+            "sblDays": round(sb[0] / avg, 2) if sb else None,  # 借券賣出餘額是幾天的成交量（÷ 5 日均量）
             "ret20": ret20, "ma60": round(ma60, 2) if ma60 else None,
             "bias60": round((close / ma60 - 1) * 100, 1) if ma60 else None,
             "series": [exs[x]["q"].get(code, [None] * 10)[Q_CLOSE] for x in reversed(window)],
@@ -197,11 +200,12 @@ def crowding(x, c):
     return min(pts, c["max_penalty"]), why
 
 
-def weights_for(cfg, margin_ok):
+def weights_for(cfg, margin_ok, sbl_ok=True):
     w = dict(cfg["weights"])
-    if not margin_ok:  # 融資資料還沒公布：這一項不計分，其他項目依比例放大回滿分 100
-        rest = sum(v for k, v in w.items() if k != "margin")
-        w = {k: (0 if k == "margin" else v * 100 / rest) for k, v in w.items()}
+    off = [k for k, ok in (("margin", margin_ok), ("sbl", sbl_ok)) if not ok and w.get(k)]
+    if off:  # 融資或借券資料還沒公布：這幾項不計分，其他項目依比例放大回滿分 100
+        rest = sum(v for k, v in w.items() if k not in off)
+        w = {k: (0 if k in off else v * 100 / rest) for k, v in w.items()}
     return w
 
 
@@ -217,10 +221,14 @@ def score_market(rows, w, big_lookup, cfg):
     rr = [0.5] * len(rows)  # 沒有營收資料（新上市、剛轉板等）給中間值
     for i, v in zip(have, pct_rank([rows[i]["rev3"] for i in have])):
         rr[i] = v
-    for x, a, b, c, m, rv in zip(rows, r1, r5, rc, rm, rr):
+    have = [i for i, x in enumerate(rows) if x.get("sblDays") is not None]
+    rs = [0.5] * len(rows)  # 借券賣出越少分數越高；不在借券表上（不能借券賣出）給中間值
+    for i, v in zip(have, pct_rank([-rows[i]["sblDays"] for i in have])):
+        rs[i] = v
+    for x, a, b, c, m, rv, sv in zip(rows, r1, r5, rc, rm, rr, rs):
         x["parts"] = {"inst_today": a * w["inst_today"], "inst_5d": b * w["inst_5d"],
                       "consistency": c * w["consistency"], "margin": m * w["margin"], "big_holders": 0.0,
-                      "revenue": rv * w.get("revenue", 0)}
+                      "revenue": rv * w.get("revenue", 0), "sbl": sv * w.get("sbl", 0)}
         pts, x["crowd"] = crowding(x, cfg["crowding"])
         x["penalty"] = pts if cfg["crowding"].get("deduct") else 0
         x["_pre"] = sum(x["parts"].values()) - x["penalty"]
@@ -303,6 +311,8 @@ def reason_for(x):
         s.append(f"融資近 5 日{'減少' if x['marginAdd5'] < 0 else '增加'} {abs(x['marginAdd5']):,} 張")
     if x.get("rev3") is not None:
         s.append(f"近 3 個月營收比去年同期{'成長' if x['rev3'] >= 0 else '衰退'} {abs(x['rev3']):.1f}%")
+    if x.get("sblBal") is not None:
+        s.append(f"借券賣出餘額 {x['sblBal']:,} 張，約 {x['sblDays']:.1f} 天的成交量" if x["sblBal"] else "沒有借券賣出餘額")
     if x.get("crowd"):
         s.append(("籌碼偏重扣 " + str(x["penalty"]) + " 分：" if x.get("penalty") else "籌碼偏重：") + "、".join(x["crowd"]))
     return "；".join(s).replace("-", "−") + "。"
@@ -480,6 +490,12 @@ def _sp(v):
     return ("+" if v > 0 else "−" if v < 0 else "") + f"{abs(v):.2f}"
 
 
+def sbl_ready(e0, mk):
+    """這個市場的借券資料抓到了嗎？還沒公布（pending）或借券功能上線前存的日子（沒有 sbl）都算沒有。"""
+    src = "twse_sbl" if mk == "上市" else "tpex_sbl"
+    return src not in (e0.get("pending") or []) and bool(e0.get("sbl"))
+
+
 def compute_day(days, exs, cfg, companies, big_provider, history, revenue=None, alerts=None):
     """計算 days[0] 這一天的選股、排行與大盤體溫。days：新到舊的完整資料交易日。"""
     d0 = days[0]
@@ -498,7 +514,7 @@ def compute_day(days, exs, cfg, companies, big_provider, history, revenue=None, 
         grp = [x for x in rows if x["market"] == mk]
         universe[mk] = len(grp)
         margin_ok = ("twse_margin" if mk == "上市" else "tpex_margin") not in e0["pending"]
-        w = weights_for(cfg, margin_ok)
+        w = weights_for(cfg, margin_ok, sbl_ready(e0, mk))
         eff[mk] = {k: round(v, 1) for k, v in w.items()}
         top = score_market(grp, w, lookup, cfg)
         # 出場規則用的全市場排名：所有合格股票照分數排（千張大戶一項當中間值，跟回測一樣），只存前 RANK_KEEP 名
@@ -509,6 +525,7 @@ def compute_day(days, exs, cfg, companies, big_provider, history, revenue=None, 
             x["reason"] = reason_for(x)
             picks.append({k: v for k, v in x.items() if not k.startswith("_")})
     pending_margin = [mk for mk, s in (("上市", "twse_margin"), ("上櫃", "tpex_margin")) if s in e0["pending"]]
+    pending_sbl = [mk for mk in MARKETS if not sbl_ready(e0, mk)]
     idx = e0.get("indices", {})
     return {
         "model": MODEL_VERSION,
@@ -517,6 +534,7 @@ def compute_day(days, exs, cfg, companies, big_provider, history, revenue=None, 
         "tdcc": lookup.describe(),
         "revenueMonths": rev_months,
         "marginPending": pending_margin,
+        "sblPending": pending_sbl,
         "pending": e0["pending"],
         "alertsMissing": alerts_missing,
         "universe": universe,
