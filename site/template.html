@@ -1654,7 +1654,8 @@ footer a{color:var(--ink-2)}
       h("div", null, h("span", null, "季線乖離"), h("b", { class: dir(p.bias60) }, p.bias60 == null ? "—" : pct(p.bias60, 1))),
       h("div", null, h("span", null, "20 日漲跌"), h("b", { class: dir(p.ret20) }, p.ret20 == null ? "—" : pct(p.ret20, 1))),
       h("div", null, h("span", null, "融資 5 日"), h("b", { class: dir(p.marginUp5) }, p.marginUp5 == null ? "—" : pct(p.marginUp5, 1))),
-      h("div", null, h("span", null, "近 3 月營收年增"), h("b", { class: dir(p.rev3) }, p.rev3 == null ? "—" : pct(p.rev3, 1))));
+      h("div", null, h("span", null, "近 3 月營收年增"), h("b", { class: dir(p.rev3) }, p.rev3 == null ? "—" : pct(p.rev3, 1))),
+      p.sblDays !== undefined ? h("div", null, h("span", null, "借券回補天數"), h("b", null, p.sblDays == null ? "—" : fmt(p.sblDays, 1) + " 天")) : null);
     var tdays = (L.tradingDays || []).slice(0, (p.instHist || []).length);
     var table = h("table", { class: "days" },
       h("thead", null, h("tr", null, h("th", null, "日期"), h("th", null, "收盤"), h("th", null, "法人買賣超（張）"))),
@@ -1835,7 +1836,7 @@ footer a{color:var(--ink-2)}
   }
 
   // ---------- 分數怎麼算 ----------
-  // 「回測結果」：config.json 的 backtest 是 12 年回測（第 7 版權重），how 是權重怎麼選的，old 是舊版同樣算法的結果，recent 是最近兩年
+  // 「回測結果」：config.json 的 backtest 是 12 年回測（第 8 版權重），how 是權重怎麼選的，old 是舊版同樣算法的結果，recent 是最近兩年
   function btResult() {
     var B = D.backtest, rc = B.recent, o = B.old;
     function per(o) { return MK.map(function (m) { var x = o[m]; return x ? m + "名單 5 個交易日後平均比同市場" + rel(x.d5) + "，20 個交易日後" + rel(x.d20) : null; }).filter(Boolean).join("；"); }
@@ -1868,7 +1869,8 @@ footer a{color:var(--ink-2)}
       big_holders: "集保資料中持股超過 1,000 張的股東，持股比例比前一週增加 1 個百分點以上給滿分，減少 1 個百分點以上給 0 分，中間依比例。集保的歷史資料不夠長，這項還沒辦法用 12 年回測檢查。",
       inst_today: "當天三大法人買超張數 ÷ 近 5 日平均成交量。名單本來就只挑當天法人合計買超的股票，12 年回測裡再把買超張數加進分數，名單反而略差，所以第 7 版起不計分。",
       inst_5d: "近 5 個交易日三大法人累計買超 ÷ 5 日總成交量。12 年回測裡加進分數略差，第 7 版起不計分；買超大於 5 日均量時還是會標示。",
-      margin: "近 5 個交易日融資減少越多，原本給越高分。但 12 年回測裡這項權重越高名單越差，連當初調權重用的最近兩年也一樣，所以第 7 版起不計分；「融資大減」「籌碼偏重」還是會標示。"
+      margin: "近 5 個交易日融資減少越多，原本給越高分。但 12 年回測裡這項權重越高名單越差，連當初調權重用的最近兩年也一樣，所以第 7 版起不計分；「融資大減」「籌碼偏重」還是會標示。",
+      sbl: "借券賣出餘額 ÷ 近 5 日平均成交量，也就是借券賣出的股數要幾天的成交量才回補得完；在同一個市場裡越少分數越高，不能借券賣出的股票給中間值。借券賣出多半是法人在放空或避險。12 年回測裡加進這項，名單 20 個交易日後比同市場多的幅度，上市從 0.76% 變 0.90%、上櫃從 0.70% 變 0.85%，13 年裡上市有 10 年、上櫃有 9 年比較好，好處大多在 2020 年下半年以後。代價是換進來的多半是最近已經在漲、漲跌比較大的股票，20 天後賺錢的比例沒有變高。第 8 版（2026 年 11 月 10 日）起計分。"
     };
     var order = scored().sort(function (a, b) { return wOf(b) - wOf(a); }).concat(FK.filter(function (k) { return !(wOf(k) > 0); }));
     var factors = h("div", { class: "panel" }, h("ul", { class: "factors" }, order.map(function (k) {
@@ -1898,12 +1900,12 @@ footer a{color:var(--ink-2)}
       D.exits && D.exits.rule && D.exits.rule.backtest ? h("h3", null, "參考進出規則") : null,
       D.exits && D.exits.rule && D.exits.rule.backtest ? h("p", null, exitMethod()) : null,
       h("h3", null, "什麼時候更新"),
-      h("p", null, "每個交易日晚上 9 點 40 分到 11 點多之間會自動更新好幾次（融資融券約 9 點半才公布；網站的排程常晚一點，所以多排幾次），隔天早上開盤前再檢查幾次有沒有補上的資料。集保千張大戶一週更新一次" +
+      h("p", null, "每個交易日晚上 9 點 40 分到 11 點多之間會自動更新好幾次（融資融券、借券賣出約 9 點半才公布；網站的排程常晚一點，所以多排幾次），隔天早上開盤前再檢查幾次有沒有補上的資料。集保千張大戶一週更新一次" +
         (t.week ? "，這次用 " + md(t.week) + " 那一週和 " + (t.prevWeek ? md(t.prevWeek) : "前一週") + " 比較。" : "。")),
       h("h3", null, "資料來源"),
       h("ul", null,
-        h("li", null, h("a", { href: "https://www.twse.com.tw/", target: "_blank", rel: "noopener" }, "臺灣證券交易所"), "：三大法人、收盤行情與指數、融資融券、當日沖銷、三大法人買賣金額、公司基本資料"),
-        h("li", null, h("a", { href: "https://www.tpex.org.tw/", target: "_blank", rel: "noopener" }, "證券櫃檯買賣中心"), "：上櫃三大法人、行情、櫃買指數、融資融券、當日沖銷"),
+        h("li", null, h("a", { href: "https://www.twse.com.tw/", target: "_blank", rel: "noopener" }, "臺灣證券交易所"), "：三大法人、收盤行情與指數、融資融券、借券賣出餘額、當日沖銷、三大法人買賣金額、公司基本資料"),
+        h("li", null, h("a", { href: "https://www.tpex.org.tw/", target: "_blank", rel: "noopener" }, "證券櫃檯買賣中心"), "：上櫃三大法人、行情、櫃買指數、融資融券、借券賣出餘額、當日沖銷"),
         h("li", null, h("a", { href: "https://mops.twse.com.tw/", target: "_blank", rel: "noopener" }, "公開資訊觀測站"), "：上市櫃公司每月營業收入"),
         h("li", null, h("a", { href: "https://www.tdcc.com.tw/portal/zh/smWeb/qryStock", target: "_blank", rel: "noopener" }, "臺灣集中保管結算所"), "：集保戶股權分散表")));
     body.appendChild(h("div", { class: "method-grid" }, factors, prose));
