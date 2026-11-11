@@ -1,10 +1,6 @@
 下載 2026-11-11 盤後資料…
   2026-11-11 沒有資料（休市或尚未公布）
 交易日： 11/10 11/09 11/06 11/05 11/04
-  連線失敗（HTTP Error 307: Temporary Redirect），10 秒後重試：https://www.twse.com.tw/rwd/zh/announcement/punish
-  連線失敗（HTTP Error 307: Temporary Redirect），20 秒後重試：https://www.twse.com.tw/rwd/zh/announcement/punish
-  連線失敗（HTTP Error 307: Temporary Redirect），30 秒後重試：https://www.twse.com.tw/rwd/zh/announcement/punish
-  上市處置股下載失敗，先用上次的資料：HTTP Error 307: Temporary Redirect https://www.twse.com.tw/rwd/zh/announcement/punish?querytype=3&stockNo=&selectType=&proceType=&remarkType=&startDate=20260927&endDate=20261111&response=json
 2026-11-10 結果沒有變化
   美國 CPI（10 月）：勞工統計局還沒有 2026-10 的數字，下次再試
 國際盤勢： 美股 11/10 收盤：費半 −0.3%、那斯達克 −0.7%、S&P 500 −0.4%。；費半近 20 個交易日下跌 18.1%，跌破 50 日均線（差 14.1%）。 
