@@ -1,0 +1,10 @@
+cbc_60.html: 52892 bytes, relaxed=False, content-type=text/html; charset=utf-8
+cbc_default.html: 45054 bytes, relaxed=False, content-type=text/html; charset=utf-8
+cbc_p2_60.html: 53091 bytes, relaxed=False, content-type=text/html; charset=utf-8
+yahoo_CL_F.json: 3675 bytes, relaxed=False, content-type=application/json;charset=utf-8
+yahoo_GC_F.json: 3374 bytes, relaxed=False, content-type=None
+yahoo_DXY.json: 3884 bytes, relaxed=False, content-type=None
+yahoo_TWD_X.json: 3637 bytes, relaxed=False, content-type=None
+yahoo_TNX.json: 3578 bytes, relaxed=False, content-type=None
+bls_cpi.json: 12560 bytes, relaxed=False, content-type=application/json
+fetched at 2026-11-12 08:32:04 UTC
