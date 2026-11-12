@@ -5,7 +5,8 @@
 
 結果從哪裡來：
 - Fed：聯準會的會後聲明（決策日美東時間下午 2 點公布）
-- CPI、非農：美國勞工統計局的公開資料 API（不用金鑰；一次請求拿齊要的數列，未註冊每天限 25 次）
+- CPI、非農：美國勞工統計局的公開資料 API（不用金鑰；一次請求拿齊要的數列，未註冊每天限 25 次）。
+  CPI 平常列年增率；去年同月沒有資料時（2026 年 10 月那次）改列月增率
 - 台灣央行、選舉：沒有固定格式，手動寫在 events.json 的 result（一句話）
 - 市場反應：S&P 500、10 年債殖利率用 macro.py 已經抓的 Yahoo 走勢，台股用自己存的加權指數漲跌
 
@@ -26,8 +27,9 @@ from .net import FetchError, decode, fetch, get_text
 NY = ZoneInfo("America/New_York")
 FED_URL = "https://www.federalreserve.gov/newsevents/pressreleases/monetary{}a.htm"
 BLS_URL = "https://api.bls.gov/publicAPI/v1/timeseries/data/"
-# CPI：全部項目、扣掉食物和能源（都是未季調，年增率和官方公布的一樣）；非農：就業人數（千人，季調）、失業率（季調）
-SERIES = {"cpi": ("CUUR0000SA0", "CUUR0000SA0L1E"), "nfp": ("CES0000000001", "LNS14000000")}
+# CPI：全部項目、扣掉食物和能源（未季調：年增率和官方公布的一樣；季調：去年同月沒有資料時改算月增率）；
+# 非農：就業人數（千人，季調）、失業率（季調）
+SERIES = {"cpi": ("CUUR0000SA0", "CUUR0000SA0L1E", "CUSR0000SA0", "CUSR0000SA0L1E"), "nfp": ("CES0000000001", "LNS14000000")}
 LATEST = ("fomc", "cpi", "nfp", "cbc")  # 每種留最近一次
 AUTO = ("fomc", "cpi", "nfp")           # 結果自動抓的種類
 ONE_OFF_DAYS = 30     # 其他（選舉）留幾天
@@ -198,15 +200,27 @@ def ref_month(e):
     return _ym(e["date"][:7], -1)
 
 
-def cpi_result(nsa, core, ref):
-    """年增率用未季調指數算（和勞工統計局公布的一樣）。ref 那個月還沒有資料 → None（還沒公布）。"""
+def cpi_result(nsa, core, ref, sa=None, core_sa=None):
+    """年增率用未季調指數算（和勞工統計局公布的一樣）。ref 那個月還沒有資料 → None（還沒公布）。
+    ref 那個月有資料、但去年同月沒有（2025 年 10 月美國政府停擺，勞工統計局沒有公布）→ 算不出年增率，
+    改用季調後指數算月增率（和官方公布的月增一樣）。"""
     def yoy(s, m):
         a, b = s.get(m), s.get(_ym(m, -12))
         return _r1((a / b - 1) * 100) if a and b else None
 
+    def mom(s, m):
+        a, b = (s or {}).get(m), (s or {}).get(_ym(m, -1))
+        return _r1((a / b - 1) * 100) if a and b else None
+
     v = {"ref": ref, "yoy": yoy(nsa, ref), "prev": yoy(nsa, _ym(ref, -1)),
          "core": yoy(core, ref), "corePrev": yoy(core, _ym(ref, -1))}
-    return v if v["yoy"] is not None and v["core"] is not None else None
+    if v["yoy"] is not None and v["core"] is not None:
+        return v
+    if not nsa.get(ref) or not core.get(ref):
+        return None  # 這個月的數字還沒公布
+    m = {"ref": ref, "mom": mom(sa, ref), "momPrev": mom(sa, _ym(ref, -1)),
+         "coreMom": mom(core_sa, ref), "coreMomPrev": mom(core_sa, _ym(ref, -1))}
+    return m if m["mom"] is not None and m["coreMom"] is not None else None
 
 
 def nfp_result(pay, rate, ref):
@@ -223,6 +237,10 @@ def _n(v, nd=1):
 
 
 def cpi_text(r):
+    if r.get("yoy") is None:  # 去年同月沒有資料：只有月增率
+        s = f"月增 {_n(r['mom'])}%" + (f"（前月 {_n(r['momPrev'])}%）" if r.get("momPrev") is not None else "")
+        s += f"，扣掉食物和能源的核心月增 {_n(r['coreMom'])}%" + (f"（前月 {_n(r['coreMomPrev'])}%）" if r.get("coreMomPrev") is not None else "")
+        return s + "；去年同月沒有資料，這次沒有年增率"
     s = f"年增 {_n(r['yoy'])}%" + (f"（前月 {_n(r['prev'])}%）" if r.get("prev") is not None else "")
     return s + f"，扣掉食物和能源的核心 {_n(r['core'])}%" + (f"（前月 {_n(r['corePrev'])}%）" if r.get("corePrev") is not None else "")
 
@@ -381,8 +399,8 @@ def update(now, timeline, series, taiex, fetch_text=None, problems=None, post=No
                 except DataError as err:
                     problems.append(f"{e['name']}：{err}")
             elif bls is not None:
-                a, b = (bls.get(x) or {} for x in SERIES[g])
-                v = (cpi_result if g == "cpi" else nfp_result)(a, b, ref_month(e))
+                ss = [bls.get(x) or {} for x in SERIES[g]]
+                v = cpi_result(ss[0], ss[1], ref_month(e), *ss[2:]) if g == "cpi" else nfp_result(ss[0], ss[1], ref_month(e))
                 if not v:
                     print(f"  {e['name']}：勞工統計局還沒有 {ref_month(e)} 的數字，下次再試")
             if v:

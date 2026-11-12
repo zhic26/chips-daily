@@ -1,5 +1,7 @@
 """最近公布的結果：聯準會聲明、勞工統計局的 CPI 與非農、市場反應、每種留最近一次、存起來之後不重抓。"""
 import datetime as dt
+import json
+import os
 import tempfile
 import unittest
 from zoneinfo import ZoneInfo
@@ -9,6 +11,7 @@ from chips import macro as M
 from chips import store
 from chips.checks import DataError
 from chips.net import FetchError
+from tests.helpers import FIX
 
 TPE = ZoneInfo("Asia/Taipei")
 
@@ -120,6 +123,32 @@ class Bls(unittest.TestCase):
         self.assertEqual(E.cpi_text(r), "年增 3.7%（前月 3.4%），扣掉食物和能源的核心 2.6%（前月 2.4%）")
         self.assertIsNone(E.cpi_result(one("A", NSA), one("B", CORE), "2026-10"))  # 還沒公布
 
+    def test_cpi_without_year_ago(self):
+        """2026 年 10 月的 CPI：去年 10 月政府停擺沒有資料，算不出年增率，改列月增率。
+        樣本是 2026/11/12 從勞工統計局 API 抓的真實回應（2025-10 的值是 "-"）。"""
+        with open(os.path.join(FIX, "macro", "bls_cpi.json"), encoding="utf-8") as f:
+            s = E.parse_bls(json.load(f))
+        nsa, core, sa, core_sa = (s[x] for x in E.SERIES["cpi"])
+        self.assertNotIn("2025-10", nsa)
+        self.assertNotIn("2025-10", sa)
+        r = E.cpi_result(nsa, core, "2026-10", sa, core_sa)
+        self.assertEqual(r, {"ref": "2026-10", "mom": 0.4, "momPrev": 0.6, "coreMom": 0.3, "coreMomPrev": 0.3})  # 官方公布的也是 0.4、0.3
+        self.assertEqual(E.cpi_text(r), "月增 0.4%（前月 0.6%），扣掉食物和能源的核心月增 0.3%（前月 0.3%）；去年同月沒有資料，這次沒有年增率")
+        # 有去年同月的月份照舊列年增率
+        r9 = E.cpi_result(nsa, core, "2026-09", sa, core_sa)
+        self.assertEqual((r9["yoy"], r9["core"]), (3.7, 2.6))
+        self.assertTrue(E.cpi_text(r9).startswith("年增 3.7%"))
+        self.assertNotIn("mom", r9)
+        # 下個月（11 月）有去年同月、但「前月」的年增率算不出來：只列當月
+        nsa2, core2 = dict(nsa, **{"2026-11": 334.0}), dict(core, **{"2026-11": 340.0})
+        r11 = E.cpi_result(nsa2, core2, "2026-11", sa, core_sa)
+        self.assertEqual((r11["yoy"], r11["prev"], r11["corePrev"]), (3.0, None, None))
+        self.assertNotIn("前月", E.cpi_text(r11))
+        # 還沒公布的月份、或沒有季調數列可以算月增：都當作還沒有結果
+        self.assertIsNone(E.cpi_result(nsa, core, "2026-11", sa, core_sa))
+        self.assertIsNone(E.cpi_result(nsa, core, "2026-10"))
+        self.assertIsNone(E.cpi_result(nsa, core, "2026-10", {k: v for k, v in sa.items() if k != "2026-09"}, core_sa))
+
     def test_nfp(self):
         r = E.nfp_result(one("A", PAY), one("B", UR), "2026-09")
         self.assertEqual(E.nfp_text(r), "新增 2.9 萬人（前月 13.3 萬），失業率 4.2%（前月 4.1%）")
@@ -213,9 +242,9 @@ class Update(unittest.TestCase):
         self.assertEqual(nfp["result"], "新增 2.9 萬人（前月 13.3 萬），失業率 4.2%（前月 4.1%）")
         self.assertEqual(cbc, {"at": "2026-09-17T23:59+08:00", "hasTime": False, "name": "台灣央行理監事會", "kind": "cbc",
                                "result": "利率不變（重貼現率 2%）", "react": "台股 9/18 +1.93%"})
-        self.assertEqual(len(self.calls), 2)  # 聲明 1 次；CPI、非農的 4 個數列一次請求拿齊
-        self.assertEqual(self.payload, {"seriesid": ["CES0000000001", "CUUR0000SA0", "CUUR0000SA0L1E", "LNS14000000"],
-                                        "startyear": "2024", "endyear": "2026"})
+        self.assertEqual(len(self.calls), 2)  # 聲明 1 次；CPI（未季調、季調各 2 個）、非農的 6 個數列一次請求拿齊
+        self.assertEqual(self.payload, {"seriesid": ["CES0000000001", "CUSR0000SA0", "CUSR0000SA0L1E", "CUUR0000SA0", "CUUR0000SA0L1E",
+                                                     "LNS14000000"], "startyear": "2024", "endyear": "2026"})
         saved = store.load_meta("event_results")
         self.assertTrue(all(v["react"]["done"] for v in saved.values()))
         again = E.update(self.now + dt.timedelta(days=1), self.tl, {}, {}, self.web, None, self.api)  # 這次 Yahoo、台股都沒資料
@@ -230,6 +259,23 @@ class Update(unittest.TestCase):
         self.assertNotIn("res", store.load_meta("event_results")["fomc:2026-10-28"])
         out = self.run_once()  # 下次抓到了
         self.assertTrue(all("result" in x for x in out))
+
+    def test_october_cpi_shows_monthly_change(self):
+        with open(os.path.join(FIX, "macro", "bls_cpi.json"), encoding="utf-8") as f:
+            real = json.load(f)
+        oct_cpi = {"date": "2026-11-10", "time": "08:30", "tz": "America/New_York", "kind": "cpi", "name": "美國 CPI（10 月）"}
+        now = dt.datetime(2026, 11, 12, 8, 0, tzinfo=TPE)
+        calls = []
+
+        def post(url, payload):
+            calls.append(payload)
+            return real
+        out = E.update(now, ev(manual=[oct_cpi]), {}, {}, self.web, None, post)
+        self.assertEqual(out[0]["result"], "月增 0.4%（前月 0.6%），扣掉食物和能源的核心月增 0.3%（前月 0.3%）；去年同月沒有資料，這次沒有年增率")
+        self.assertNotIn("pending", out[0])
+        again = E.update(now + dt.timedelta(hours=1), ev(manual=[oct_cpi]), {}, {}, self.web, None, post)
+        self.assertEqual(again[0]["result"], out[0]["result"])
+        self.assertEqual(len(calls), 1)  # 存下來了，不會每次更新都再問勞工統計局
 
     def test_month_not_out_yet(self):
         """公布時間過了，但 API 還沒有那個月的數字：先顯示還沒抓到，只問一次。"""

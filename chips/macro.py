@@ -6,6 +6,9 @@
 
 資料：
 - Yahoo Finance 的走勢圖介面（非官方，可能改版；抓不到時這一區顯示上次的數字並註明，名單照常更新）
+- 中央銀行每個工作日下午 4～5 點公布的「新臺幣對美元銀行間成交之收盤匯率」（台北收盤）。
+  新台幣那一格用這個：Yahoo 的新台幣日線收在倫敦午夜（台北隔天早上 7～8 點），反映的是隔夜的國際報價，
+  2026/11/6～11/11 連四天升貶方向都跟台北收盤相反。Yahoo 的報價只留著算 ADR 溢價（時間比較接近 ADR 收盤）
 - 美國聯準會網站的 FOMC 會議日程（每週重抓一次）
 - 手動維護的 events.json：美國 CPI、非農就業、台灣央行理監事會（每年底補上隔年的日期）
 - 已經過去的事件公布了什麼、市場怎麼動：見 events.py
@@ -33,11 +36,22 @@ SYMBOLS = [
     ("vix", "^VIX", "VIX 恐慌指數", "", (5, 100)),
     ("tnx", "^TNX", "美國 10 年期公債殖利率", "%", (0.1, 20)),
     ("dxy", "DX-Y.NYB", "美元指數", "", (60, 160)),
-    ("twd", "TWD=X", "新台幣匯率", "元", (20, 45)),
+    ("usdtwd", "TWD=X", "新台幣國際報價", "元", (20, 45)),
     ("wti", "CL=F", "西德州原油", "美元", (-50, 400)),
     ("gold", "GC=F", "黃金", "美元", (300, 20000)),
 ]
-NAMES = {k: n for k, _, n, _, _ in SYMBOLS}
+HIDDEN = {"usdtwd"}  # 只用來算 ADR 溢價，網頁上不顯示
+# 幾乎 24 小時交易的代號：Yahoo 的日線照交易所當地的日曆天切（到午夜才算走完），
+# 但美國白天的交易在紐約下午 5 點就結束了，所以過了那個時間就採用當天那一根。
+# 不這樣做的話，台北早上更新時這幾格會停在前一天（2026/11/11 早上黃金還顯示 CPI 公布前的數字）。
+ALL_DAY = {"dxy", "usdtwd", "wti", "gold"}
+NY = ZoneInfo("America/New_York")
+DAY_END_HOUR = 17
+# 新台幣（台北收盤）：key, 名稱, 單位, 合理範圍；一頁 60 筆、最新的在前面
+TWD = ("twd", "新台幣匯率", "元", (20, 45))
+CBC_URL = "https://www.cbc.gov.tw/tw/lp-645-1-1-60.html"
+TWD_KEEP = 400  # data/meta/twd.json 留幾個交易日
+NAMES = dict({k: n for k, _, n, _, _ in SYMBOLS}, **{TWD[0]: TWD[1]})
 SPARK = 60
 CHART = "https://query1.finance.yahoo.com/v8/finance/chart/{}?range=6mo&interval=1d"
 FOMC_URL = "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
@@ -48,9 +62,10 @@ ADR_RATIO = 5  # 1 股台積電 ADR = 5 股台股
 
 # ---------------- 解析 ----------------
 
-def parse_chart(j, now_ts):
+def parse_chart(j, now_ts, all_day=False):
     """Yahoo 走勢圖回應 → [(交易所當地日期, 收盤)]，舊到新。
-    去掉週末的零星報價、還沒收盤的那一根，同一天只留一筆。"""
+    去掉週末的零星報價、還沒收盤的那一根，同一天只留一筆。
+    all_day：幾乎 24 小時交易的代號（期貨、美元指數、匯率），最後一根只要過了那天的紐約下午 5 點就採用。"""
     try:
         r = j["chart"]["result"][0]
         ts = r.get("timestamp") or []
@@ -70,7 +85,11 @@ def parse_chart(j, now_ts):
         d = dt.datetime.fromtimestamp(t, tz).date()
         if d.weekday() < 5:
             bars.append((t, d, float(c)))
-    if bars and reg.get("start") and reg.get("end") and reg["start"] <= now_ts < reg["end"] \
+    if bars and all_day:
+        d = bars[-1][1]
+        if now_ts < dt.datetime(d.year, d.month, d.day, DAY_END_HOUR, tzinfo=NY).timestamp():
+            bars.pop()  # 那天美國白天的交易還沒結束
+    elif bars and reg.get("start") and reg.get("end") and reg["start"] <= now_ts < reg["end"] \
             and bars[-1][0] >= reg["start"] - 12 * 3600:
         bars.pop()  # 正在交易、還沒收盤
     out = {}
@@ -109,6 +128,44 @@ def adr_premium(tsm, twd, tw_close):
         if d in t and c and rate:
             out.append((d, round((t[d] / (c * ADR_RATIO / rate[-1]) - 1) * 100, 2)))
     return out[-SPARK:]
+
+
+def parse_cbc(html):
+    """中央銀行「新臺幣/美元 銀行間收盤匯率」頁 → [(日期, 收盤匯率)]，舊到新。
+    表格一列兩格：<td>2026/11/12</td><td>32.889</td>。"""
+    if "NTD/USD" not in html:
+        raise DataError("央行收盤匯率頁找不到 NTD/USD 這一欄，網頁可能改版")
+    rows = {}
+    for tr in re.findall(r"<tr\b[^>]*>(.*?)</tr>", html, flags=re.S | re.I):
+        cells = [re.sub(r"<[^>]+>", "", c).strip() for c in re.findall(r"<td\b[^>]*>(.*?)</td>", tr, flags=re.S | re.I)]
+        if len(cells) != 2:
+            continue
+        m = re.fullmatch(r"(\d{4})/(\d{1,2})/(\d{1,2})", cells[0])
+        if not m or not re.fullmatch(r"\d{1,3}(?:\.\d+)?", cells[1]):
+            continue
+        try:
+            d = dt.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        except ValueError:
+            continue
+        rows[d.isoformat()] = float(cells[1])
+    if len(rows) < 15:
+        raise DataError(f"央行收盤匯率頁只讀到 {len(rows)} 筆（平常一頁 60 筆），網頁可能改版")
+    return sorted(rows.items())
+
+
+def taipei_twd(fetch_text):
+    """抓央行公布的台北收盤匯率，併進 data/meta/twd.json（自己累積，網頁哪天只給比較少筆也不怕）。回傳 [(日期, 匯率)]，舊到新。"""
+    new = parse_cbc(fetch_text(CBC_URL))
+    lo, hi = TWD[3]
+    bad = [(d, v) for d, v in new if not lo <= v <= hi]
+    if bad:
+        raise DataError(f"央行收盤匯率出現不合理的數字：{bad[0][0]} {bad[0][1]}")
+    saved = (store.load_meta("twd", {}) or {}).get("rates") or {}
+    merged = dict(saved, **dict(new))
+    keep = dict(sorted(merged.items())[-TWD_KEEP:])
+    if keep != saved:
+        store.save_meta("twd", {"rates": keep})
+    return sorted(keep.items())
 
 
 def parse_fomc(html):
@@ -193,11 +250,11 @@ def read(t, adr):
     parts = []
     r, dx, tw = t.get("tnx"), t.get("dxy"), t.get("twd")
     if r and r.get("d20") is not None:
-        parts.append(f"美國 10 年債殖利率 {r['last']:.2f}%，近 20 日{'上升' if r['d20'] >= 0 else '下降'} {abs(r['d20']):.2f} 個百分點")
+        parts.append(f"美國 10 年債殖利率 {r['last']:.3f}%，近 20 日{'上升' if r['d20'] >= 0 else '下降'} {abs(r['d20']):.2f} 個百分點")
     if dx and dx.get("chg20") is not None:
         parts.append(f"美元指數近 20 日 {_s(dx['chg20'])}%")
     if tw and tw.get("chg20") is not None:
-        parts.append(f"新台幣近 20 日{'貶值' if tw['chg20'] > 0 else '升值'} {abs(tw['chg20']):.1f}%（1 美元兌 {tw['last']:.2f} 元）")
+        parts.append(f"新台幣近 20 日{'貶值' if tw['chg20'] > 0 else '升值'} {abs(tw['chg20']):.1f}%（台北收盤 1 美元兌 {tw['last']:.3f} 元）")
     if parts:
         s.append("；".join(parts) + "。")
     for k, nm in (("wti", "原油"), ("gold", "黃金")):
@@ -249,37 +306,55 @@ def update(now, tw_close, fetch_json=None, taiex=None, fetch_text=None, post_jso
     problems = []
     old = store.load_meta("macro", {}) or {}
     old_tiles = old.get("tiles") or {}
+    old_aux = old.get("aux") or {}
     raw, older = {}, set()
+
+    def take(key, name, s, prev, source, max_age=7):
+        """檢查一條走勢再收下。prev：上次存下的最新日期（這次反而比較舊就沿用上次的）。"""
+        if len(s) < 25:
+            raise DataError(f"{name}只有 {len(s)} 天資料，{source}的回應可能改了")
+        if (now.date() - dt.date.fromisoformat(s[-1][0])).days > max_age:
+            raise DataError(f"{name}最新資料停在 {s[-1][0]}，{source}可能已經不更新")
+        if prev and s[-1][0] < prev:
+            # Yahoo 偶爾回傳少了最後一天的資料（10/30、10/31 早上都發生過）：上次的比較新，整格沿用，ADR 溢價也不重算
+            older.add(key)
+        else:
+            raw[key] = s
+
     for key, sym, name, _, (lo, hi) in SYMBOLS:
         try:
-            s = parse_chart(fetch_json(CHART.format(urllib.parse.quote(sym))), now.timestamp())
-            if len(s) < 25:
-                raise DataError(f"{name}只有 {len(s)} 天資料，Yahoo 回應可能改了")
-            if not lo <= s[-1][1] <= hi:
+            s = parse_chart(fetch_json(CHART.format(urllib.parse.quote(sym))), now.timestamp(), all_day=key in ALL_DAY)
+            if s and not lo <= s[-1][1] <= hi:
                 raise DataError(f"{name}最新值 {s[-1][1]} 不在合理範圍，資料可能有問題")
-            if (now.date() - dt.date.fromisoformat(s[-1][0])).days > 7:
-                raise DataError(f"{name}最新資料停在 {s[-1][0]}，Yahoo 可能已經不更新這個代號")
-            prev = (old_tiles.get(key) or {}).get("date")
-            if prev and s[-1][0] < prev:
-                # Yahoo 偶爾回傳少了最後一天的資料（10/30、10/31 早上都發生過）：上次的比較新，整格沿用，ADR 溢價也不重算
-                older.add(key)
-                continue
-            raw[key] = s
+            take(key, name, s, old_aux.get(key) if key in HIDDEN else (old_tiles.get(key) or {}).get("date"), "Yahoo ")
         except FetchError as e:
             print(f"  {name}下載失敗：{e}")
         except DataError as e:
             problems.append(str(e))
+    key, name, unit, _ = TWD
+    try:  # 新台幣：央行公布的台北收盤
+        was = old_tiles.get(key) or {}
+        take(key, name, taipei_twd(fetch_text or (lambda u: get_text(u, retries=2))),
+             was.get("date") if was.get("src") == "cbc" else None, "央行網頁",  # 改版前存的是 Yahoo 的數字，不拿來比新舊
+             max_age=16)  # 農曆年台北外匯市場最長休 11～12 天
+    except FetchError as e:
+        print(f"  {name}下載失敗：{e}")
+    except DataError as e:
+        problems.append(str(e))
     tiles = {}
-    for key, _, name, unit, _ in SYMBOLS:
+    for key, name, unit in [(k, n, u) for k, _, n, u, _ in SYMBOLS if k not in HIDDEN] + [TWD[:3]]:
         if key in raw:
             tiles[key] = dict(stats(raw[key]), name=name, unit=unit)
+            if key == TWD[0]:
+                tiles[key]["src"] = "cbc"
         elif key in older:
             tiles[key] = old_tiles[key]
         elif key in old_tiles:
             tiles[key] = dict(old_tiles[key], stale=True)  # 這次沒抓到：用上次的，網頁會註明日期
-    adr = adr_premium(raw.get("tsm"), raw.get("twd"), tw_close)
+    adr = adr_premium(raw.get("tsm"), raw.get("usdtwd"), tw_close)
     if not adr and old.get("adr"):
         adr = [tuple(x) for x in old["adr"]]
+    aux = {k: raw[k][-1][0] if k in raw else old_aux.get(k) for k in HIDDEN}
     manual = _manual(problems)
     if manual and max(e["date"] for e in manual) < (now.date() + dt.timedelta(days=60)).isoformat():
         print("  提醒：events.json 只登記到", max(e["date"] for e in manual), "，記得補上之後的 CPI、非農與央行日期")
@@ -290,7 +365,8 @@ def update(now, tw_close, fetch_json=None, taiex=None, fetch_text=None, post_jso
         problems.append(f"最近公布的結果：{e!r}")
         past = old.get("past") or []
     m = {"tiles": tiles, "adr": [list(x) for x in adr], "events": upcoming(now, fomc, manual), "past": past,
-         "read": read(tiles, adr), "missing": [NAMES[k] for k in NAMES if k not in raw and k not in older]}
+         "read": read(tiles, adr), "aux": {k: v for k, v in aux.items() if v},
+         "missing": [NAMES[k] for k in NAMES if k not in raw and k not in older and k not in HIDDEN]}
     strip = lambda x: {k: v for k, v in x.items() if k not in ("asOf", "_saved")}  # noqa: E731
     same = old.get("asOf") and json.dumps(strip(old), sort_keys=True) == json.dumps(strip(m), sort_keys=True)
     m["asOf"] = old["asOf"] if same else now.isoformat(timespec="minutes")  # 數字沒變就不改時間，網頁才不會每次都變
