@@ -649,7 +649,7 @@ footer a{color:var(--ink-2)}
       <div class="panel disclaimer" style="margin-top:18px">
         <p>本站是個人製作的資料整理網站，不是證券投資顧問事業，也不收取任何費用或報酬。</p>
         <p>名單由程式依公開資料和固定規則自動算出，只供研究與學習參考，不是買賣任何股票的建議或邀約，也不保證任何報酬。過去的表現不代表未來。</p>
-        <p>資料取自臺灣證券交易所、證券櫃檯買賣中心、臺灣集中保管結算所、公開資訊觀測站的公開資訊；國際行情取自 Yahoo Finance，事件日期取自美國聯準會、美國勞工統計局與中央銀行。資料可能有延遲、遺漏或事後更正，一切以各機構公告為準。</p>
+        <p>資料取自臺灣證券交易所、證券櫃檯買賣中心、臺灣集中保管結算所、公開資訊觀測站的公開資訊；國際行情取自 Yahoo Finance，新台幣收盤匯率取自中央銀行，事件日期取自美國聯準會、美國勞工統計局與中央銀行。資料可能有延遲、遺漏或事後更正，一切以各機構公告為準。</p>
         <p>投資一定有風險，融資、當沖等信用交易風險更高，可能損失超過本金。請依自己的財務狀況判斷，盈虧自負。</p>
       </div>
     </section>
@@ -936,7 +936,7 @@ footer a{color:var(--ink-2)}
     ["VIX 恐慌指數", "用美股選擇權價格算出的預期波動。20 以下算平靜，30 以上是恐慌。"],
     ["美國 10 年期公債殖利率", "長期利率。上升時，本益比高的科技股評價壓力比較大。"],
     ["美元指數", "美元對歐元、日圓等主要貨幣的強弱。美元強的時候，資金常流回美國。"],
-    ["新台幣匯率", "1 美元換多少新台幣，數字變大就是新台幣貶值。外資大買台股時，新台幣常跟著升值。"],
+    ["新台幣匯率", "1 美元換多少新台幣，數字變大就是新台幣貶值。用的是中央銀行每個工作日下午 4 點多公布的台北收盤匯率，跟報紙寫的收盤價一樣。外資大買台股時，新台幣常跟著升值。"],
     ["原油、黃金", "原油是通膨和中東局勢的溫度計；黃金常在避險需求升高時上漲。"]
   ];
   var EV_NOTE = {
@@ -972,17 +972,18 @@ footer a{color:var(--ink-2)}
     } else {
       if (!t) return null;
       name = t.name;
-      var nd = { sox: 0, ixic: 0, spx: 0, gold: 0 }[key];
+      var nd = { sox: 0, ixic: 0, spx: 0, gold: 0, tnx: 3, twd: 3 }[key];  // 10 年債、新台幣看的是 5%、33 元這種整數關卡，多顯示一位
       val = fmt(t.last, nd == null ? 2 : nd);
       unit = key === "tnx" ? "%" : key === "wti" || key === "gold" ? "美元" : "";
-      if (key === "tnx" || key === "vix") { chg = t.d1 == null ? null : arrow(t.d1) + fmt(Math.abs(t.d1), 2); cls = dir(t.d1); }
+      if (key === "tnx" || key === "vix") { chg = t.d1 == null ? null : arrow(t.d1) + fmt(Math.abs(t.d1), key === "tnx" ? 3 : 2); cls = dir(t.d1); }
       else if (key === "twd") { chg = t.chg1 == null ? null : (t.chg1 > 0 ? "新台幣貶 " : "新台幣升 ") + fmt(Math.abs(t.chg1), 2) + "%"; }
       else { chg = t.chg1 == null ? null : arrow(t.chg1) + fmt(Math.abs(t.chg1), 2) + "%"; cls = dir(t.chg1); }
       if (key === "sox" || key === "ixic" || key === "spx")
         sub = "近 20 日 " + pct(t.chg20, 1) + (t.ma50 == null ? "" : "｜" + (t.ma50 >= 0 ? "50 日線上 " : "50 日線下 ") + fmt(Math.abs(t.ma50), 1) + "%");
       else if (key === "vix") sub = "近 20 日平均 " + fmt(t.avg20, 1);
       else if (key === "tnx") sub = t.d20 == null ? "" : "近 20 日" + (t.d20 >= 0 ? "上升 " : "下降 ") + fmt(Math.abs(t.d20), 2) + " 個百分點";
-      else if (key === "twd") sub = "1 美元兌新台幣" + (t.chg20 == null ? "" : "；近 20 日" + (t.chg20 > 0 ? "貶 " : "升 ") + fmt(Math.abs(t.chg20), 1) + "%");
+      else if (key === "twd") sub = (t.src === "cbc" ? "台北 " + md(t.date) + " 收盤" : "1 美元兌新台幣") +
+        (t.chg20 == null ? "" : "；近 20 日" + (t.chg20 > 0 ? "貶 " : "升 ") + fmt(Math.abs(t.chg20), 1) + "%");
       else if (key === "dxy") sub = "近 20 日 " + pct(t.chg20, 1);
       else sub = "近 5 日 " + pct(t.chg5, 1) + "｜近 20 日 " + pct(t.chg20, 1);
       if (t.stale) sub = "資料停在 " + md(t.date) + "；" + sub;
@@ -1023,7 +1024,8 @@ footer a{color:var(--ink-2)}
       h("ul", null, MACRO_HOW.map(function (x) { return h("li", null, h("b", null, x[0]), x[1]); })));
     if (window.matchMedia && window.matchMedia("(min-width: 900px)").matches) how.open = true;
     body.appendChild(h("div", { class: "macro-cols" + (res ? " has-past" : "") }, ev, res, how));
-    body.appendChild(h("p", { class: "fine" }, "國際行情來自 Yahoo Finance（非官方介面，偶爾會延遲或抓不到），事件日期來自美國聯準會、美國勞工統計局與中央銀行。" +
+    body.appendChild(h("p", { class: "fine" }, "國際行情來自 Yahoo Finance（非官方介面，偶爾會延遲或抓不到），新台幣是中央銀行公布的台北收盤匯率，事件日期來自美國聯準會、美國勞工統計局與中央銀行。" +
+      "原油、黃金、美元指數幾乎全天都在交易，早上那幾次更新用的是更新當下的價格，跟當天最後的收盤會差一點。" +
       "Fed 的結果取自聯準會會後聲明，CPI 與非農是美國勞工統計局的官方數字；台灣央行和選舉的結果是手動整理的。" +
       "市場反應只列出當天的漲跌，同一天也可能有別的消息，不代表都是那件事造成的。" +
       "回測裡，美股前一晚的漲跌在台股隔天的開盤價就反映了（費半當晚漲跌和台股隔天開盤跳空的相關係數 0.63，和開盤後到收盤只有 −0.14），" +
