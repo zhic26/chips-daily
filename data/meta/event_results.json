@@ -100,6 +100,13 @@
    "tw": "2026-11-11",
    "taiex": 3.62,
    "done": true
+  },
+  "res": {
+   "ref": "2026-10",
+   "mom": 0.4,
+   "momPrev": 0.6,
+   "coreMom": 0.3,
+   "coreMomPrev": 0.3
   }
  }
 }
