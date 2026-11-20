@@ -1,0 +1,20 @@
+name: 三大法人期貨更早的歷史（FinMind，暫時）
+on:
+  push:
+    branches: [backtest]
+    paths: [bt/fut_finmind.py]
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          python bt/fut_finmind.py
