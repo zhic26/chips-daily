@@ -14,7 +14,7 @@ UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.3
 os.makedirs(OUT, exist_ok=True)
 st = {}
 for sym, tz in (("^VIX", "America/New_York"), ("^GSPC", "America/New_York"), ("^IXIC", "America/New_York"), ("^TWII", "Asia/Taipei")):
-    u = f"https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(sym)}?range=max&interval=1d"
+    u = f"https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(sym)}?period1=473385600&period2={int(time.time()) + 86400}&interval=1d"  # 1985 起；range=max 會變成月線
     try:
         with urllib.request.urlopen(urllib.request.Request(u, headers=UA), timeout=90) as r:
             j = json.loads(r.read())
